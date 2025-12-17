@@ -123,11 +123,11 @@ router.get('/:id/availability', async (req, res) => {
 // @route   POST /api/courts
 // @desc    Create a new court (Admin only)
 // @access  Private/Admin
-router.post('/', [protect, admin, [
+router.post('/', protect, admin, [
   body('name').trim().notEmpty().withMessage('Court name is required'),
   body('type').isIn(['indoor', 'outdoor']).withMessage('Type must be indoor or outdoor'),
   body('hourlyBaseRate').isFloat({ min: 0 }).withMessage('Hourly rate must be a positive number')
-]], async (req, res) => {
+], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

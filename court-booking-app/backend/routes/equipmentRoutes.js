@@ -62,12 +62,17 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/equipment
 // @desc    Create new equipment (Admin only)
 // @access  Private/Admin
-router.post('/', [protect, admin, [
+router.post('/', protect, admin, [
   body('name').trim().notEmpty().withMessage('Equipment name is required'),
-  body('type').isIn(['racket', 'shoes', 'other']).withMessage('Type must be racket, shoes, or other'),
-  body('totalQuantity').isInt({ min: 0 }).withMessage('Total quantity must be a positive number'),
+  body('type').isIn(['racket', 'ball', 'net', 'shoes', 'other']).withMessage('Type must be racket, ball, net, shoes, or other'),
+  body('totalQuantity').optional().isInt({ min: 0 }).withMessage('Total quantity must be a positive number'),
+  body('quantity').optional().isInt({ min: 0 }).withMessage('Quantity must be a positive number'),
   body('hourlyRate').isFloat({ min: 0 }).withMessage('Hourly rate must be a positive number')
-]], async (req, res) => {
+], async (req, res) => {
+  // Map quantity to totalQuantity if provided
+  if (req.body.quantity && !req.body.totalQuantity) {
+    req.body.totalQuantity = req.body.quantity;
+  }
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

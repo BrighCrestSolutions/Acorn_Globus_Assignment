@@ -62,11 +62,11 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/pricing-rules
 // @desc    Create new pricing rule (Admin only)
 // @access  Private/Admin
-router.post('/', [protect, admin, [
+router.post('/', protect, admin, [
   body('name').trim().notEmpty().withMessage('Rule name is required'),
   body('type').isIn(['time-based', 'day-based', 'court-type', 'seasonal', 'custom']).withMessage('Invalid rule type'),
   body('multiplier').isFloat({ min: 0 }).withMessage('Multiplier must be a positive number')
-]], async (req, res) => {
+], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

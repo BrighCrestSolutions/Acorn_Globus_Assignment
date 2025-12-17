@@ -8,7 +8,7 @@ const equipmentSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['racket', 'shoes', 'other'],
+    enum: ['racket', 'ball', 'net', 'shoes', 'other'],
     required: [true, 'Please specify equipment type']
   },
   totalQuantity: {
@@ -46,12 +46,12 @@ const equipmentSchema = new mongoose.Schema({
 });
 
 // Initialize available quantity
-equipmentSchema.pre('save', function(next) {
+equipmentSchema.pre('save', function() {
   if (this.isNew) {
     this.availableQuantity = this.totalQuantity;
   }
   this.updatedAt = Date.now();
-  next();
+  
 });
 
 module.exports = mongoose.model('Equipment', equipmentSchema);

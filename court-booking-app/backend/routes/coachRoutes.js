@@ -61,11 +61,11 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/coaches
 // @desc    Create new coach (Admin only)
 // @access  Private/Admin
-router.post('/', [protect, admin, [
+router.post('/', protect, admin, [
   body('name').trim().notEmpty().withMessage('Coach name is required'),
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('hourlyRate').isFloat({ min: 0 }).withMessage('Hourly rate must be a positive number')
-]], async (req, res) => {
+], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
