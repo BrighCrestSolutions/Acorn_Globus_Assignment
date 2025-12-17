@@ -22,6 +22,21 @@
   --color-border: hsl(214.3 31.8% 91.4%);
   --color-input: hsl(214.3 31.8% 91.4%);
   --color-ring: hsl(221.2 83.2% 53.3%);
+  
+  /* Status Badge Colors */
+  --color-green-100: #dcfce7;
+  --color-green-800: #166534;
+  --color-yellow-100: #fef9c3;
+  --color-yellow-800: #854d0e;
+  --color-red-100: #fee2e2;
+  --color-red-800: #991b1b;
+  --color-blue-100: #dbeafe;
+  --color-blue-800: #1e40af;
+  --color-purple-100: #f3e8ff;
+  --color-purple-800: #6b21a8;
+  --color-gray-100: #f3f4f6;
+  --color-gray-800: #1f2937;
+  --color-orange-600: #ea580c;
 }
 
 @layer base {

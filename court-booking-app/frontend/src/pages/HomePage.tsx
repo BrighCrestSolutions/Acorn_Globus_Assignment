@@ -24,7 +24,7 @@ export const HomePage: React.FC = () => {
                 </Button>
               </Link>
               <Link to="/login">
-                <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10">
+                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
                   Login / Sign Up
                 </Button>
               </Link>
