@@ -2,11 +2,72 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const { verifyFirebaseToken } = require('../utils/firebaseAuth');
 const { generateOTP, sendOTPEmail } = require('../utils/emailService');
 const { generateToken } = require('../utils/jwtUtils');
 
+// @route   POST /api/auth/firebase-sync
+// @desc    Sync Firebase user with backend database
+// @access  Public (requires Firebase token)
+router.post('/firebase-sync', async (req, res) => {
+  try {
+    // Get Firebase token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No authentication token provided'
+      });
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+
+    // Verify Firebase token using REST API
+    const firebaseUser = await verifyFirebaseToken(idToken);
+    const { uid, email, name, email_verified } = firebaseUser;
+
+    // Find or create user in database
+    let user = await User.findOne({ firebaseUid: uid });
+
+    if (user) {
+      // Update existing user info
+      user.name = name;
+      user.email = email;
+      user.isVerified = email_verified;
+      await user.save();
+    } else {
+      // Create new user
+      user = await User.create({
+        email,
+        name,
+        firebaseUid: uid,
+        isVerified: email_verified,
+        role: 'user'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User synced successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Firebase sync error:', error);
+    res.status(401).json({
+      success: false,
+      message: error.message || 'Authentication failed'
+    });
+  }
+});
+
 // @route   POST /api/auth/send-otp
-// @desc    Send OTP to email
+// @desc    Send OTP for admin login
 // @access  Public
 router.post('/send-otp', [
   body('email').isEmail().withMessage('Please provide a valid email'),
@@ -31,15 +92,13 @@ router.post('/send-otp', [
       if (user.name !== name) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid credentials. Please check your name and email.'
+          message: 'The name doesn\'t match our records.'
         });
       }
     } else {
-      // Create new user if doesn't exist
-      user = await User.create({
-        email,
-        name,
-        isVerified: false
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email. Please use Google sign-in to register.'
       });
     }
 
@@ -83,7 +142,7 @@ router.post('/send-otp', [
 });
 
 // @route   POST /api/auth/verify-otp
-// @desc    Verify OTP and login
+// @desc    Verify OTP and login (admin only)
 // @access  Public
 router.post('/verify-otp', [
   body('email').isEmail().withMessage('Please provide a valid email'),

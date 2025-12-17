@@ -34,7 +34,21 @@ export const BookingPage: React.FC = () => {
 
   // State management
   const [court, setCourt] = useState<Court | null>(null);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  
+  // Auto-advance to next day if current day is past (after 9 PM)
+  const getInitialDate = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    // If it's past 9 PM (21:00), start with tomorrow's date
+    if (currentHour >= 21) {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return format(tomorrow, 'yyyy-MM-dd');
+    }
+    return format(now, 'yyyy-MM-dd');
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(getInitialDate());
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -75,6 +89,19 @@ export const BookingPage: React.FC = () => {
       fetchPricing();
     }
   }, [selectedSlot, selectedEquipment, selectedCoach]);
+
+  // Auto-advance to next day if all slots are past
+  useEffect(() => {
+    if (slots.length > 0) {
+      const allPast = slots.every((slot: any) => slot.isPast);
+      if (allPast) {
+        // All slots are past, advance to next day
+        const currentDate = new Date(selectedDate);
+        currentDate.setDate(currentDate.getDate() + 1);
+        setSelectedDate(format(currentDate, 'yyyy-MM-dd'));
+      }
+    }
+  }, [slots]);
 
   // Handle reservation errors
   useEffect(() => {

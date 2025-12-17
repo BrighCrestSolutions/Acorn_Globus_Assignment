@@ -115,9 +115,54 @@ const sendWaitlistNotification = async (email, details) => {
   }
 };
 
+// Send waitlist expired notification
+const sendWaitlistExpiredEmail = async (email, name, details) => {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: 'Waitlist Expired - Court Booking Platform',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #ff6b6b;">Waitlist Entry Expired</h2>
+        <p>Hi ${name},</p>
+        <p>Unfortunately, we couldn't secure a booking for you as the time slot has passed.</p>
+        <div style="background-color: #fff3cd; padding: 20px; border-radius: 5px; border-left: 4px solid #ffc107;">
+          <h3 style="margin-top: 0; color: #856404;">Expired Waitlist Details:</h3>
+          <p><strong>Court:</strong> ${details.courtName}</p>
+          <p><strong>Date:</strong> ${new Date(details.date).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</p>
+          <p><strong>Time:</strong> ${details.startTime} - ${details.endTime}</p>
+        </div>
+        <p style="margin-top: 20px;">We apologize for the inconvenience. Please try booking again for a different time slot.</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/courts" 
+             style="background-color: #4CAF50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Browse Available Courts
+          </a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+        <p style="color: #999; font-size: 12px;">Court Booking Platform - Sports Facility Management</p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error) {
+    console.error('Email send error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   generateOTP,
   sendOTPEmail,
   sendBookingConfirmation,
   sendWaitlistNotification,
+  sendWaitlistExpiredEmail,
 };

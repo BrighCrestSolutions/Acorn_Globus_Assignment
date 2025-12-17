@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Waitlist = require('../models/Waitlist');
+const User = require('../models/User');
 const { protect } = require('../middleware/authMiddleware');
 const { sendWaitlistNotification } = require('../utils/emailService');
+const { autoUpdateExpiredWaitlist } = require('../services/waitlistExpiryService');
 
 // @route   POST /api/waitlist
 // @desc    Join waitlist
@@ -52,6 +54,11 @@ router.post('/', protect, [
       status: 'waiting'
     });
 
+    // Update user's phone number if provided and different
+    if (phone && req.user.phone !== phone) {
+      await User.findByIdAndUpdate(req.user.id, { phone: phone });
+    }
+
     // Set expiration (24 hours from desired date)
     const desiredDateTime = new Date(desiredDate);
     const expiresAt = new Date(desiredDateTime.getTime() + 24 * 60 * 60 * 1000);
@@ -93,13 +100,13 @@ router.post('/', protect, [
 // @route   GET /api/waitlist
 // @desc    Get user's waitlist entries
 // @access  Private
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, autoUpdateExpiredWaitlist, async (req, res) => {
   try {
     const { status } = req.query;
 
     const query = { user: req.user.id };
     if (status) query.status = status;
-    else query.status = 'waiting'; // Default to waiting
+    // Don't default to only waiting - show all statuses unless specified
 
     const waitlist = await Waitlist.find(query)
       .populate('court', 'name type')

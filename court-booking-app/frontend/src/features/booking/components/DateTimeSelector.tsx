@@ -6,7 +6,7 @@ import { Label } from '../../../components/ui/label';
 import { Calendar, Clock } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import type { TimeSlot } from '../../../types';
-import { getSlotStatus, getSlotLabel, isSlotSelectable } from '../utils/slotHelpers';
+import { getSlotStatus, getSlotLabel, isSlotSelectable, canJoinWaitlist } from '../utils/slotHelpers';
 
 interface DateTimeSelectorProps {
   selectedDate: string;
@@ -66,6 +66,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
               const status = getSlotStatus(slotData);
               const label = getSlotLabel(slotData);
               const selectable = isSlotSelectable(slotData);
+              const showWaitlistBtn = canJoinWaitlist(slotData);
               
               return (
                 <div key={idx} className="space-y-1">
@@ -75,6 +76,8 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
                     onClick={() => onSlotSelect(slot)}
                     className={`w-full ${
                       status === 'past' ? 'opacity-40 cursor-not-allowed' : 
+                      status === 'myBooking' ? 'bg-green-100 border-green-500 text-green-800 hover:bg-green-100' :
+                      status === 'waitlisted' ? 'bg-orange-100 border-orange-500 text-orange-800 hover:bg-orange-100' :
                       status === 'reserved' ? 'opacity-60 border-orange-300' :
                       status === 'holding' ? 'border-blue-500 bg-blue-50' : ''
                     }`}
@@ -83,7 +86,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
                     {format(new Date(slot.startTime), 'HH:mm')}
                     {label && <span className="ml-1 text-[10px]">{label}</span>}
                   </Button>
-                  {!slot.available && status !== 'past' && status !== 'reserved' && (
+                  {showWaitlistBtn && (
                     <Button
                       size="sm"
                       variant="outline"

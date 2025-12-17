@@ -62,7 +62,7 @@ router.get('/:id', async (req, res) => {
 
 // @route   GET /api/courts/:id/availability
 // @desc    Get available slots for a court on a specific date
-// @access  Public
+// @access  Public (but uses auth if available)
 router.get('/:id/availability', async (req, res) => {
   try {
     const { date } = req.query;
@@ -74,8 +74,35 @@ router.get('/:id/availability', async (req, res) => {
       });
     }
 
-    // Pass userId if authenticated to show user's own reservations
-    const userId = req.user?.id || null;
+    // Extract userId from token if provided (optional authentication)
+    let userId = null;
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const { verifyFirebaseToken } = require('../utils/firebaseAuth');
+        const User = require('../models/User');
+        
+        // Try JWT first (admin OTP login), then fallback to Firebase
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          userId = decoded.id ? decoded.id.toString() : null;
+          console.log('[Availability] JWT userId extracted:', userId);
+        } catch (jwtError) {
+          // If JWT fails, try Firebase token
+          const firebaseUser = await verifyFirebaseToken(token);
+          const user = await User.findOne({ firebaseUid: firebaseUser.uid });
+          if (user) {
+            userId = user._id.toString();
+            console.log('[Availability] Firebase userId extracted:', userId);
+          }
+        }
+      } catch (err) {
+        // If all token verification fails, continue without userId
+        console.log('Token verification failed for availability check:', err.message);
+      }
+    }
+
     const slots = await getAvailableSlots(req.params.id, date, userId);
 
     res.status(200).json({

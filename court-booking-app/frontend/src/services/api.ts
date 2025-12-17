@@ -39,6 +39,10 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
+  syncFirebaseUser: (idToken: string) =>
+    api.post('/auth/firebase-sync', {}, {
+      headers: { Authorization: `Bearer ${idToken}` }
+    }),
   sendOTP: (email: string, name: string) =>
     api.post('/auth/send-otp', { email, name }),
   verifyOTP: (email: string, name: string, otp: string) =>

@@ -172,6 +172,18 @@ const getAvailableSlots = async (courtId, date, userId = null) => {
     startTime: { $gte: startOfDay, $lte: endOfDay }
   }).sort({ startTime: 1 });
 
+  // Get user's waitlist entries for this court on this date
+  let userWaitlistEntries = [];
+  if (userId) {
+    const Waitlist = require('../models/Waitlist');
+    userWaitlistEntries = await Waitlist.find({
+      court: courtId,
+      user: userId,
+      desiredDate: { $gte: startOfDay, $lte: endOfDay },
+      status: 'waiting'
+    });
+  }
+
   // Generate available slots (assuming 1-hour slots from 6 AM to 10 PM)
   const slots = [];
   const startHour = 6;
@@ -188,13 +200,23 @@ const getAvailableSlots = async (courtId, date, userId = null) => {
     const isPast = slotStart <= now;
 
     // Check if this slot conflicts with any booking
-    const isBooked = bookings.some(booking => {
+    const booking = bookings.find(booking => {
       return (
         (booking.startTime <= slotStart && booking.endTime > slotStart) ||
         (booking.startTime < slotEnd && booking.endTime >= slotEnd) ||
         (booking.startTime >= slotStart && booking.endTime <= slotEnd)
       );
     });
+    const isBooked = !!booking;
+    // Ensure both IDs are strings for comparison
+    const bookingUserId = booking ? booking.user.toString() : null;
+    const currentUserId = userId ? userId.toString() : null;
+    const isBookedByMe = booking && currentUserId && bookingUserId === currentUserId;
+    
+    // Debug logging for first slot only
+    if (hour === startHour && userId) {
+      console.log('[Slot Check] userId:', currentUserId, 'bookingUserId:', bookingUserId, 'isBookedByMe:', isBookedByMe);
+    }
 
     // Check if this slot is reserved by another user
     const reservation = reservations.find(res => {
@@ -208,13 +230,27 @@ const getAvailableSlots = async (courtId, date, userId = null) => {
     const isReservedByOther = reservation && userId && reservation.user.toString() !== userId.toString();
     const isReservedByMe = reservation && userId && reservation.user.toString() === userId.toString();
 
+    // Check if user is in waitlist for this slot
+    const formatTime = (date) => {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    };
+    const slotStartTime = formatTime(slotStart);
+    const slotEndTime = formatTime(slotEnd);
+    const isInWaitlist = userWaitlistEntries.some(entry => 
+      entry.desiredStartTime === slotStartTime && entry.desiredEndTime === slotEndTime
+    );
+
     slots.push({
       startTime: slotStart,
       endTime: slotEnd,
       available: !isBooked && !isPast && !isReservedByOther,
       isPast: isPast,
       isReserved: !!reservation,
-      reservedByMe: isReservedByMe
+      reservedByMe: isReservedByMe,
+      isBookedByMe: isBookedByMe,
+      isInWaitlist: isInWaitlist
     });
   }
 

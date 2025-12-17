@@ -375,15 +375,28 @@ const processWaitlist = async (cancelledBooking) => {
       firstInQueue.status = 'converted';
       await firstInQueue.save();
 
-      // Notify user via email
-      const { sendWaitlistNotification } = require('../utils/emailService');
-      const startDate = new Date(cancelledBooking.startTime);
-      sendWaitlistNotification(firstInQueue.user.email, {
-        courtName: cancelledBooking.court.name || 'Court',
-        date: startDate.toLocaleDateString(),
-        startTime: startDate.toLocaleTimeString(),
-        endTime: new Date(cancelledBooking.endTime).toLocaleTimeString()
-      }).catch(err => console.error('Waitlist notification failed:', err));
+      // Send booking confirmation email
+      const { sendBookingConfirmation } = require('../utils/emailService');
+      const booking = newBooking.booking;
+      const Court = require('../models/Court');
+      const court = await Court.findById(booking.court);
+      sendBookingConfirmation(
+        firstInQueue.user.email,
+        firstInQueue.user.name,
+        {
+          bookingId: booking._id.toString(),
+          courtName: court?.name || 'Court',
+          date: new Date(booking.startTime).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          startTime: formatTime(new Date(booking.startTime)),
+          endTime: formatTime(new Date(booking.endTime)),
+          totalAmount: booking.pricing?.finalTotal || 0
+        }
+      ).catch(err => console.error('Booking confirmation email failed:', err));
 
       // Update positions for remaining waitlist entries
       for (let i = 1; i < waitlistEntries.length; i++) {
