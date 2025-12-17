@@ -12,7 +12,8 @@ router.post('/', protect, [
   body('courtId').notEmpty().withMessage('Court ID is required'),
   body('desiredDate').isISO8601().withMessage('Valid date is required'),
   body('desiredStartTime').notEmpty().withMessage('Start time is required'),
-  body('desiredEndTime').notEmpty().withMessage('End time is required')
+  body('desiredEndTime').notEmpty().withMessage('End time is required'),
+  body('phone').notEmpty().withMessage('Phone number is required')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -23,7 +24,7 @@ router.post('/', protect, [
       });
     }
 
-    const { courtId, desiredDate, desiredStartTime, desiredEndTime, equipmentItems, coachId } = req.body;
+    const { courtId, desiredDate, desiredStartTime, desiredEndTime, equipmentItems, coachId, phone, notes } = req.body;
 
     // Check if user already in waitlist for this slot
     const existing = await Waitlist.findOne({
@@ -63,6 +64,8 @@ router.post('/', protect, [
       desiredEndTime,
       equipment: equipmentItems || [],
       coach: coachId || null,
+      phone: phone,
+      notes: notes || '',
       position: count + 1,
       status: 'waiting',
       expiresAt

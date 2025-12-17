@@ -24,6 +24,7 @@ app.use('/api/coaches', require('./routes/coachRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/pricing-rules', require('./routes/pricingRuleRoutes'));
 app.use('/api/waitlist', require('./routes/waitlistRoutes'));
+app.use('/api/reservations', require('./routes/reservationRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Health check

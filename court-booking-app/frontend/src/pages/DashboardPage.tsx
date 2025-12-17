@@ -15,6 +15,10 @@ export const DashboardPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(searchParams.get('success') === 'true');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     loadBookings();
@@ -119,7 +123,7 @@ export const DashboardPage: React.FC = () => {
 
       {/* Bookings List */}
       <div className="space-y-4">
-        {bookings.map((booking) => (
+        {bookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((booking) => (
           <Card key={booking._id}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -221,6 +225,29 @@ export const DashboardPage: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* Pagination */}
+      {bookings.length > itemsPerPage && (
+        <div className="flex justify-center items-center gap-2 mt-6">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {Math.ceil(bookings.length / itemsPerPage)}
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(p => Math.min(Math.ceil(bookings.length / itemsPerPage), p + 1))}
+            disabled={currentPage === Math.ceil(bookings.length / itemsPerPage)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

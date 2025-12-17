@@ -108,6 +108,14 @@ export const waitlistAPI = {
   notifyNext: (data: any) => api.post('/waitlist/notify-next', data),
 };
 
+// Reservations API
+export const reservationsAPI = {
+  create: (data: { courtId: string; startTime: string; endTime: string }) =>
+    api.post('/reservations', data),
+  extend: (id: string) => api.put(`/reservations/${id}/extend`),
+  release: (id: string) => api.delete(`/reservations/${id}`),
+};
+
 // Admin API
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),

@@ -74,7 +74,9 @@ router.get('/:id/availability', async (req, res) => {
       });
     }
 
-    const slots = await getAvailableSlots(req.params.id, date);
+    // Pass userId if authenticated to show user's own reservations
+    const userId = req.user?.id || null;
+    const slots = await getAvailableSlots(req.params.id, date, userId);
 
     res.status(200).json({
       success: true,

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { courtsAPI, equipmentAPI, coachesAPI, bookingsAPI, waitlistAPI } from '../services/api';
+import { courtsAPI, equipmentAPI, coachesAPI, bookingsAPI, waitlistAPI, reservationsAPI } from '../services/api';
 import type { Court, Equipment, Coach, TimeSlot } from '../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
-import { Calendar, Clock, ShoppingCart, User, Check, ArrowRight, Loader2 } from 'lucide-react';
+import { Calendar, Clock, ShoppingCart, User, Check, ArrowRight, Loader2, X } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 
 export const BookingPage: React.FC = () => {
@@ -32,6 +32,17 @@ export const BookingPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Waitlist modal state
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [waitlistSlot, setWaitlistSlot] = useState<TimeSlot | null>(null);
+  const [waitlistEquipment, setWaitlistEquipment] = useState<Array<{ item: string; quantity: number }>>([]);
+  const [waitlistCoach, setWaitlistCoach] = useState<string | null>(null);
+  const [waitlistNotes, setWaitlistNotes] = useState('');
+  const [waitlistPhone, setWaitlistPhone] = useState('');
+  
+  // Reservation state
+  const [reservationId, setReservationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -46,6 +57,36 @@ export const BookingPage: React.FC = () => {
     loadEquipment();
     loadCoaches();
   }, [courtId, user]);
+
+  // Extend reservation when user moves to final step
+  useEffect(() => {
+    if (step === 4 && reservationId) {
+      reservationsAPI.extend(reservationId).catch(err => {
+        console.error('Failed to extend reservation:', err);
+      });
+    }
+  }, [step, reservationId]);
+
+  // Cleanup reservation on unmount or when going back to step 1
+  useEffect(() => {
+    return () => {
+      if (reservationId) {
+        reservationsAPI.release(reservationId).catch(err => {
+          console.error('Failed to release reservation:', err);
+        });
+      }
+    };
+  }, [reservationId]);
+
+  useEffect(() => {
+    if (step === 1 && reservationId) {
+      // Release reservation if user goes back to slot selection
+      reservationsAPI.release(reservationId).catch(err => {
+        console.error('Failed to release reservation:', err);
+      });
+      setReservationId(null);
+    }
+  }, [step]);
 
   useEffect(() => {
     if (court) {
@@ -133,14 +174,49 @@ export const BookingPage: React.FC = () => {
     }
   };
 
-  const handleSlotSelect = (slot: TimeSlot) => {
+  const handleSlotSelect = async (slot: TimeSlot) => {
     if (slot.available) {
       setSelectedSlot(slot);
-      setStep(2);
+      
+      // Create reservation for this slot
+      try {
+        const response = await reservationsAPI.create({
+          courtId: courtId!,
+          startTime: typeof slot.startTime === 'string' ? slot.startTime : new Date(slot.startTime).toISOString(),
+          endTime: typeof slot.endTime === 'string' ? slot.endTime : new Date(slot.endTime).toISOString()
+        });
+        
+        setReservationId(response.data.reservation._id);
+        setStep(2);
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to reserve slot');
+        // If reservation fails, still allow them to proceed but warn
+        if (err.response?.status === 400) {
+          alert(err.response?.data?.message || 'This slot may no longer be available');
+          loadAvailability(); // Refresh slots
+        } else {
+          setStep(2); // Continue anyway for other errors
+        }
+      }
     }
   };
 
-  const handleJoinWaitlist = async (slot: TimeSlot) => {
+  const handleJoinWaitlist = (slot: TimeSlot) => {
+    setWaitlistSlot(slot);
+    setWaitlistEquipment([]);
+    setWaitlistCoach(null);
+    setWaitlistNotes('');
+    setWaitlistPhone(user?.phone || '');
+    setShowWaitlistModal(true);
+  };
+
+  const submitWaitlist = async () => {
+    // Validate phone number
+    if (!waitlistPhone || waitlistPhone.trim().length < 10) {
+      setError('Please enter a valid phone number (at least 10 digits)');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -148,13 +224,16 @@ export const BookingPage: React.FC = () => {
       const response = await waitlistAPI.join({
         courtId: courtId!,
         desiredDate: selectedDate,
-        desiredStartTime: format(new Date(slot.startTime), 'HH:mm'),
-        desiredEndTime: format(new Date(slot.endTime), 'HH:mm'),
-        equipmentItems: selectedEquipment,
-        coachId: selectedCoach
+        desiredStartTime: format(new Date(waitlistSlot!.startTime), 'HH:mm'),
+        desiredEndTime: format(new Date(waitlistSlot!.endTime), 'HH:mm'),
+        equipmentItems: waitlistEquipment,
+        coachId: waitlistCoach,
+        phone: waitlistPhone,
+        notes: waitlistNotes
       });
 
-      alert(`Successfully joined waitlist! You are #${response.data.waitlistEntry.position} in queue. We'll notify you if a spot opens up.`);
+      alert(`Successfully joined waitlist! You are #${response.data.waitlistEntry.position} in queue. We'll notify you via ${waitlistPhone} if a spot opens up.`);
+      setShowWaitlistModal(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to join waitlist');
     } finally {
@@ -175,6 +254,23 @@ export const BookingPage: React.FC = () => {
 
   const updateEquipmentQuantity = (equipmentId: string, quantity: number) => {
     setSelectedEquipment(prev => 
+      prev.map(e => e.item === equipmentId ? { ...e, quantity } : e)
+    );
+  };
+
+  const toggleWaitlistEquipment = (equipmentId: string) => {
+    setWaitlistEquipment(prev => {
+      const existing = prev.find(e => e.item === equipmentId);
+      if (existing) {
+        return prev.filter(e => e.item !== equipmentId);
+      } else {
+        return [...prev, { item: equipmentId, quantity: 1 }];
+      }
+    });
+  };
+
+  const updateWaitlistEquipmentQuantity = (equipmentId: string, quantity: number) => {
+    setWaitlistEquipment(prev => 
       prev.map(e => e.item === equipmentId ? { ...e, quantity } : e)
     );
   };
@@ -202,6 +298,14 @@ export const BookingPage: React.FC = () => {
       };
 
       await bookingsAPI.create(bookingData);
+      
+      // Release reservation after successful booking
+      if (reservationId) {
+        reservationsAPI.release(reservationId).catch(err => {
+          console.error('Failed to release reservation:', err);
+        });
+      }
+      
       navigate('/dashboard?success=true');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Booking failed. Please try again.');
@@ -281,8 +385,15 @@ export const BookingPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md mb-6">
-          {error}
+        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md mb-6 flex items-start justify-between gap-3">
+          <p className="flex-1">{error}</p>
+          <button
+            onClick={() => setError('')}
+            className="text-destructive hover:text-destructive/80 transition-colors flex-shrink-0"
+            aria-label="Close error"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       )}
 
@@ -313,34 +424,53 @@ export const BookingPage: React.FC = () => {
 
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <Label>Available Time Slots</Label>
-                    <span className="text-xs text-muted-foreground">Auto-refreshing...</span>
+                    <Label>Available Time Slots (1-hour blocks)</Label>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Auto-refreshing...
+                    </span>
                   </div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    💡 Tip: Book multiple consecutive hours by selecting different slots separately. Pricing applies per hour with dynamic rules.
+                  </p>
                   <div className="grid grid-cols-3 gap-2 mt-2">
-                    {slots.map((slot, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <Button
-                          variant={selectedSlot === slot ? 'default' : slot.available ? 'outline' : 'ghost'}
-                          disabled={!slot.available}
-                          onClick={() => handleSlotSelect(slot)}
-                          className="w-full"
-                        >
-                          <Clock className="h-4 w-4 mr-1" />
-                          {format(new Date(slot.startTime), 'HH:mm')}
-                        </Button>
-                        {!slot.available && (
+                    {slots.map((slot, idx) => {
+                      const slotData = slot as any;
+                      const isReservedByOther = slotData.isReserved && !slotData.reservedByMe;
+                      const isReservedByMe = slotData.reservedByMe;
+                      
+                      return (
+                        <div key={idx} className="space-y-1">
                           <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs h-7"
-                            onClick={() => handleJoinWaitlist(slot)}
-                            disabled={loading}
+                            variant={selectedSlot === slot ? 'default' : slot.available ? 'outline' : 'ghost'}
+                            disabled={!slot.available}
+                            onClick={() => handleSlotSelect(slot)}
+                            className={`w-full ${
+                              slotData.isPast ? 'opacity-40 cursor-not-allowed' : 
+                              isReservedByOther ? 'opacity-60 border-orange-300' :
+                              isReservedByMe ? 'border-blue-500 bg-blue-50' : ''
+                            }`}
                           >
-                            Join Waitlist
+                            <Clock className="h-4 w-4 mr-1" />
+                            {format(new Date(slot.startTime), 'HH:mm')}
+                            {slotData.isPast && <span className="ml-1 text-[10px]">(Past)</span>}
+                            {isReservedByOther && <span className="ml-1 text-[10px]">(Reserved)</span>}
+                            {isReservedByMe && <span className="ml-1 text-[10px]">(Holding)</span>}
                           </Button>
-                        )}
-                      </div>
-                    ))}
+                          {!slot.available && !slotData.isPast && !isReservedByOther && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full text-xs h-7"
+                              onClick={() => handleJoinWaitlist(slot)}
+                              disabled={loading}
+                            >
+                              Join Waitlist
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   {slots.length === 0 && (
                     <p className="text-sm text-muted-foreground mt-2">No slots available for this date</p>
@@ -594,6 +724,156 @@ export const BookingPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Waitlist Modal */}
+      {showWaitlistModal && waitlistSlot && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>Join Waitlist</CardTitle>
+              <CardDescription>
+                Join waitlist for {format(new Date(waitlistSlot.startTime), 'HH:mm')} - {format(new Date(waitlistSlot.endTime), 'HH:mm')} on {selectedDate}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Phone Number */}
+              <div>
+                <Label htmlFor="waitlist-phone">Phone Number *</Label>
+                <Input
+                  id="waitlist-phone"
+                  type="tel"
+                  value={waitlistPhone}
+                  onChange={(e) => setWaitlistPhone(e.target.value)}
+                  placeholder="Enter your phone number"
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  We'll notify you if a spot opens up
+                </p>
+              </div>
+
+              {/* Equipment Selection */}
+              <div>
+                <Label>Equipment (Optional)</Label>
+                <div className="space-y-2 mt-2">
+                  {equipment.map((item) => {
+                    const selected = waitlistEquipment.find(e => e.item === item._id);
+                    return (
+                      <div key={item._id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{item.name}</div>
+                          <div className="text-xs text-muted-foreground">₹{item.hourlyRate}/hour</div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {selected ? (
+                            <>
+                              <Input
+                                type="number"
+                                min="1"
+                                max={item.availableQuantity}
+                                value={selected.quantity}
+                                onChange={(e) => updateWaitlistEquipmentQuantity(item._id, parseInt(e.target.value))}
+                                className="w-16 h-8 text-sm"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleWaitlistEquipment(item._id)}
+                              >
+                                Remove
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleWaitlistEquipment(item._id)}
+                            >
+                              Add
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Coach Selection */}
+              <div>
+                <Label>Coach (Optional)</Label>
+                <div className="space-y-2 mt-2">
+                  {coaches.map((coach) => (
+                    <div
+                      key={coach._id}
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                        waitlistCoach === coach._id ? 'border-primary bg-primary/5' : 'hover:border-gray-400'
+                      }`}
+                      onClick={() => setWaitlistCoach(waitlistCoach === coach._id ? null : coach._id)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium">{coach.name}</div>
+                          <div className="text-sm text-muted-foreground">{coach.email}</div>
+                        </div>
+                        <div className="text-sm font-semibold text-primary">
+                          ₹{coach.hourlyRate}/hour
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <Label htmlFor="waitlist-notes">Additional Notes (Optional)</Label>
+                <Input
+                  id="waitlist-notes"
+                  value={waitlistNotes}
+                  onChange={(e) => setWaitlistNotes(e.target.value)}
+                  placeholder="Any special requirements or preferences"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowWaitlistModal(false);
+                    setError('');
+                  }}
+                  disabled={loading}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={submitWaitlist}
+                  disabled={loading}
+                  className="flex-1"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Joining...
+                    </>
+                  ) : (
+                    'Join Waitlist'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

@@ -38,6 +38,14 @@ const waitlistSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  phone: {
+    type: String,
+    trim: true
+  },
+  notes: {
+    type: String,
+    trim: true
+  },
   status: {
     type: String,
     enum: ['waiting', 'notified', 'expired', 'converted'],

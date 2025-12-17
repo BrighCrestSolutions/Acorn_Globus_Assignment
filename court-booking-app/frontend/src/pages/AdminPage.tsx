@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { adminAPI, courtsAPI, equipmentAPI, coachesAPI, pricingRulesAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -8,13 +8,19 @@ import { Users, MapPin, Package, User as UserIcon, Settings, Calendar } from 'lu
 
 export const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'courts' | 'equipment' | 'coaches' | 'pricing' | 'bookings' | 'users'>('courts');
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [courts, setCourts] = useState<any[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [waitlistEntries, setWaitlistEntries] = useState<any[]>([]);
+  
+  // Pagination states
+  const [usersPage, setUsersPage] = useState(1);
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const [waitlistPage, setWaitlistPage] = useState(1);
+  const itemsPerPage = 10;
   const [editingCourt, setEditingCourt] = useState<any>(null);
   const [editingCoach, setEditingCoach] = useState<any>(null);
   const [editingEquipment, setEditingEquipment] = useState<any>(null);
@@ -232,6 +238,21 @@ export const AdminPage: React.FC = () => {
       alert(error.response?.data?.message || 'Failed to create pricing rule');
     }
   };
+
+  // Polling for bookings tab - refresh every 15 seconds
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      loadBookings();
+      loadWaitlist();
+      
+      const pollInterval = setInterval(() => {
+        loadBookings();
+        loadWaitlist();
+      }, 15000); // Poll every 15 seconds
+
+      return () => clearInterval(pollInterval);
+    }
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -684,15 +705,21 @@ export const AdminPage: React.FC = () => {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>All Bookings</CardTitle>
-              <CardDescription>View and manage all court bookings</CardDescription>
+              <CardTitle className="flex items-center justify-between">
+                <span>All Bookings</span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Auto-refreshing every 15s
+                </span>
+              </CardTitle>
+              <CardDescription>View and manage all court bookings - updates automatically</CardDescription>
             </CardHeader>
             <CardContent>
               <Button onClick={loadBookings} className="mb-4" variant="outline">
-                Refresh List
+                Refresh Now
               </Button>
               <div className="space-y-3">
-                {bookings.map((booking: any) => (
+                {bookings.slice((bookingsPage - 1) * itemsPerPage, bookingsPage * itemsPerPage).map((booking: any) => (
                   <div key={booking._id} className="p-4 border rounded-lg">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -741,6 +768,27 @@ export const AdminPage: React.FC = () => {
                 ))}
                 {bookings.length === 0 && <p className="text-gray-500 text-center py-8">No bookings found. Click Refresh to load.</p>}
               </div>
+              {bookings.length > itemsPerPage && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => setBookingsPage(p => Math.max(1, p - 1))}
+                    disabled={bookingsPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {bookingsPage} of {Math.ceil(bookings.length / itemsPerPage)}
+                  </span>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => setBookingsPage(p => Math.min(Math.ceil(bookings.length / itemsPerPage), p + 1))}
+                    disabled={bookingsPage === Math.ceil(bookings.length / itemsPerPage)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -754,7 +802,7 @@ export const AdminPage: React.FC = () => {
                 Refresh Waitlist
               </Button>
               <div className="space-y-3">
-                {waitlistEntries.map((entry: any) => (
+                {waitlistEntries.slice((waitlistPage - 1) * itemsPerPage, waitlistPage * itemsPerPage).map((entry: any) => (
                   <div key={entry._id} className="p-4 border rounded-lg border-orange-200 bg-orange-50">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -802,6 +850,27 @@ export const AdminPage: React.FC = () => {
                 ))}
                 {waitlistEntries.length === 0 && <p className="text-gray-500 text-center py-8">No waitlist entries. Click Refresh to load.</p>}
               </div>
+              {waitlistEntries.length > itemsPerPage && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => setWaitlistPage(p => Math.max(1, p - 1))}
+                    disabled={waitlistPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {waitlistPage} of {Math.ceil(waitlistEntries.length / itemsPerPage)}
+                  </span>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => setWaitlistPage(p => Math.min(Math.ceil(waitlistEntries.length / itemsPerPage), p + 1))}
+                    disabled={waitlistPage === Math.ceil(waitlistEntries.length / itemsPerPage)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </>
@@ -819,7 +888,7 @@ export const AdminPage: React.FC = () => {
               {users.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No users registered yet</p>
               ) : (
-                users.map((user) => (
+                users.slice((usersPage - 1) * itemsPerPage, usersPage * itemsPerPage).map((user) => (
                   <div key={user._id} className="p-4 border rounded-lg">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -850,6 +919,27 @@ export const AdminPage: React.FC = () => {
                 ))
               )}
             </div>
+            {users.length > itemsPerPage && (
+              <div className="flex justify-center items-center gap-2 mt-4">
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                  disabled={usersPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {usersPage} of {Math.ceil(users.length / itemsPerPage)}
+                </span>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => setUsersPage(p => Math.min(Math.ceil(users.length / itemsPerPage), p + 1))}
+                  disabled={usersPage === Math.ceil(users.length / itemsPerPage)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

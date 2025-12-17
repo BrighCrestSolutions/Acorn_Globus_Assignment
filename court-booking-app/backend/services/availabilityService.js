@@ -1,9 +1,10 @@
 const Booking = require('../models/Booking');
 const Equipment = require('../models/Equipment');
 const Court = require('../models/Court');
+const Reservation = require('../models/Reservation');
 
 // Check court availability
-const checkCourtAvailability = async (courtId, startTime, endTime, excludeBookingId = null) => {
+const checkCourtAvailability = async (courtId, startTime, endTime, excludeBookingId = null, excludeUserId = null) => {
   // First check if court exists and is active (not in maintenance)
   const court = await Court.findById(courtId);
   if (!court) {
@@ -31,7 +32,27 @@ const checkCourtAvailability = async (courtId, startTime, endTime, excludeBookin
   }
 
   const conflictingBookings = await Booking.find(query);
-  return conflictingBookings.length === 0;
+  
+  // Also check for active reservations by other users
+  const reservationQuery = {
+    court: courtId,
+    status: 'active',
+    expiresAt: { $gt: new Date() },
+    $or: [
+      { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
+      { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
+      { startTime: { $gte: startTime }, endTime: { $lte: endTime } }
+    ]
+  };
+
+  // Exclude reservations by the current user
+  if (excludeUserId) {
+    reservationQuery.user = { $ne: excludeUserId };
+  }
+
+  const conflictingReservations = await Reservation.find(reservationQuery);
+  
+  return conflictingBookings.length === 0 && conflictingReservations.length === 0;
 };
 
 // Check coach availability
@@ -109,9 +130,9 @@ const checkEquipmentAvailability = async (equipmentItems, startTime, endTime, ex
 };
 
 // Check all resources availability (atomic check)
-const checkMultiResourceAvailability = async (courtId, coachId, equipmentItems, startTime, endTime, excludeBookingId = null) => {
+const checkMultiResourceAvailability = async (courtId, coachId, equipmentItems, startTime, endTime, excludeBookingId = null, excludeUserId = null) => {
   // Check court availability
-  const courtAvailable = await checkCourtAvailability(courtId, startTime, endTime, excludeBookingId);
+  const courtAvailable = await checkCourtAvailability(courtId, startTime, endTime, excludeBookingId, excludeUserId);
   if (!courtAvailable) {
     return {
       available: false,
@@ -138,17 +159,27 @@ const checkMultiResourceAvailability = async (courtId, coachId, equipmentItems, 
 };
 
 // Get available time slots for a court on a specific date
-const getAvailableSlots = async (courtId, date) => {
+const getAvailableSlots = async (courtId, date, userId = null) => {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
 
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
 
+  const now = new Date();
+
   // Get all bookings for this court on this date
   const bookings = await Booking.find({
     court: courtId,
     status: { $in: ['confirmed', 'pending'] },
+    startTime: { $gte: startOfDay, $lte: endOfDay }
+  }).sort({ startTime: 1 });
+
+  // Get all active reservations for this court on this date
+  const reservations = await Reservation.find({
+    court: courtId,
+    status: 'active',
+    expiresAt: { $gt: now },
     startTime: { $gte: startOfDay, $lte: endOfDay }
   }).sort({ startTime: 1 });
 
@@ -164,6 +195,9 @@ const getAvailableSlots = async (courtId, date) => {
     const slotEnd = new Date(date);
     slotEnd.setHours(hour + 1, 0, 0, 0);
 
+    // Check if this slot is in the past
+    const isPast = slotStart <= now;
+
     // Check if this slot conflicts with any booking
     const isBooked = bookings.some(booking => {
       return (
@@ -173,10 +207,25 @@ const getAvailableSlots = async (courtId, date) => {
       );
     });
 
+    // Check if this slot is reserved by another user
+    const reservation = reservations.find(res => {
+      return (
+        (res.startTime <= slotStart && res.endTime > slotStart) ||
+        (res.startTime < slotEnd && res.endTime >= slotEnd) ||
+        (res.startTime >= slotStart && res.endTime <= slotEnd)
+      );
+    });
+
+    const isReservedByOther = reservation && userId && reservation.user.toString() !== userId.toString();
+    const isReservedByMe = reservation && userId && reservation.user.toString() === userId.toString();
+
     slots.push({
       startTime: slotStart,
       endTime: slotEnd,
-      available: !isBooked
+      available: !isBooked && !isPast && !isReservedByOther,
+      isPast: isPast,
+      isReserved: !!reservation,
+      reservedByMe: isReservedByMe
     });
   }
 

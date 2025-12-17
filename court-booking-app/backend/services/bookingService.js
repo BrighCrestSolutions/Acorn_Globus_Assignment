@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Court = require('../models/Court');
+const Reservation = require('../models/Reservation');
 const { calculatePrice } = require('./pricingService');
 const { checkMultiResourceAvailability } = require('./availabilityService');
 const { sendBookingConfirmation } = require('../utils/emailService');
@@ -12,6 +13,14 @@ const createBooking = async (userId, bookingData) => {
 
   try {
     const { courtId, equipmentItems, coachId, startTime, endTime, notes, phone } = bookingData;
+
+    // Step 0: Validate that booking is not for a past time slot
+    const bookingStartTime = new Date(startTime);
+    const now = new Date();
+    
+    if (bookingStartTime <= now) {
+      throw new Error('Cannot book a time slot that has already passed');
+    }
 
     // Step 1: Check availability of all resources
     const availabilityCheck = await checkMultiResourceAvailability(
@@ -67,7 +76,22 @@ const createBooking = async (userId, bookingData) => {
 
     await booking.save({ session });
 
-    // Step 5: Commit transaction
+    // Step 5: Mark any user's reservation as completed
+    await Reservation.updateMany(
+      {
+        user: userId,
+        court: courtId,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        status: 'active'
+      },
+      {
+        $set: { status: 'completed', expiresAt: new Date() }
+      },
+      { session }
+    );
+
+    // Step 6: Commit transaction
     await session.commitTransaction();
     session.endSession();
 
@@ -339,8 +363,8 @@ const processWaitlist = async (cancelledBooking) => {
       endTime: new Date(cancelledBooking.endTime),
       equipmentItems: firstInQueue.equipment,
       coachId: firstInQueue.coach,
-      notes: 'Auto-booked from waitlist',
-      phone: firstInQueue.user.phone
+      notes: firstInQueue.notes || 'Auto-booked from waitlist',
+      phone: firstInQueue.phone || firstInQueue.user.phone
     });
 
     if (newBooking.success) {
