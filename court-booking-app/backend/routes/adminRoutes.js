@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, admin } = require('../middleware/authMiddleware');
+const { autoUpdateCompletedBookings } = require('../services/bookingStatusService');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Court = require('../models/Court');
@@ -71,7 +72,7 @@ router.get('/dashboard', [protect, admin], async (req, res) => {
 // @route   GET /api/admin/bookings
 // @desc    Get all bookings (Admin view)
 // @access  Private/Admin
-router.get('/bookings', [protect, admin], async (req, res) => {
+router.get('/bookings', [protect, admin], autoUpdateCompletedBookings, async (req, res) => {
   try {
     const { status, startDate, endDate, page = 1, limit = 20 } = req.query;
 

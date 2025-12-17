@@ -532,10 +532,3 @@ court-booking-app/
 - Cross-facility booking
 - Centralized admin portal
 
-## License
-
-MIT
-
-## Contact
-
-For questions or support, contact: support@courtbooking.com

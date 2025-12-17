@@ -13,6 +13,7 @@ export const DashboardPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'cancelled' | 'completed'>('all');
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(searchParams.get('success') === 'true');
   
@@ -22,7 +23,7 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadBookings();
-  }, [filter]);
+  }, [filter, statusFilter]);
 
   const loadBookings = async () => {
     setLoading(true);
@@ -30,6 +31,7 @@ export const DashboardPage: React.FC = () => {
       const response = await bookingsAPI.getAll();
       let filtered = response.data.bookings;
 
+      // Apply time-based filter
       if (filter === 'upcoming') {
         filtered = filtered.filter((b: Booking) => 
           new Date(b.startTime) > new Date() && b.status === 'confirmed'
@@ -38,6 +40,11 @@ export const DashboardPage: React.FC = () => {
         filtered = filtered.filter((b: Booking) => 
           new Date(b.startTime) < new Date() || b.status === 'completed' || b.status === 'cancelled'
         );
+      }
+
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        filtered = filtered.filter((b: Booking) => b.status === statusFilter);
       }
 
       setBookings(filtered);
@@ -100,25 +107,70 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex space-x-2 mb-6">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          onClick={() => setFilter('all')}
-        >
-          All Bookings
-        </Button>
-        <Button
-          variant={filter === 'upcoming' ? 'default' : 'outline'}
-          onClick={() => setFilter('upcoming')}
-        >
-          Upcoming
-        </Button>
-        <Button
-          variant={filter === 'past' ? 'default' : 'outline'}
-          onClick={() => setFilter('past')}
-        >
-          Past
-        </Button>
+      <div className="space-y-3 mb-6">
+        <div>
+          <h3 className="text-sm font-medium mb-2 text-muted-foreground">Time Filter</h3>
+          <div className="flex space-x-2">
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              onClick={() => setFilter('all')}
+              size="sm"
+            >
+              All Bookings
+            </Button>
+            <Button
+              variant={filter === 'upcoming' ? 'default' : 'outline'}
+              onClick={() => setFilter('upcoming')}
+              size="sm"
+            >
+              Upcoming
+            </Button>
+            <Button
+              variant={filter === 'past' ? 'default' : 'outline'}
+              onClick={() => setFilter('past')}
+              size="sm"
+            >
+              Past
+            </Button>
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="text-sm font-medium mb-2 text-muted-foreground">Status Filter</h3>
+          <div className="flex space-x-2">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
+              size="sm"
+            >
+              All Status
+            </Button>
+            <Button
+              variant={statusFilter === 'confirmed' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('confirmed')}
+              size="sm"
+              className="bg-green-50 hover:bg-green-100 border-green-200"
+            >
+              Confirmed
+            </Button>
+            <Button
+              variant={statusFilter === 'completed' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('completed')}
+              size="sm"
+              className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+            >
+              Completed
+            </Button>
+            <Button
+              variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('cancelled')}
+              size="sm"
+              className="bg-red-50 hover:bg-red-100 border-red-200"
+            >
+              Cancelled
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Bookings List */}

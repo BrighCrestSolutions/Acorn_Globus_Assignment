@@ -11,6 +11,7 @@ const {
 } = require('../services/bookingService');
 const { previewPrice } = require('../services/pricingService');
 const { checkMultiResourceAvailability } = require('../services/availabilityService');
+const { autoUpdateCompletedBookings } = require('../services/bookingStatusService');
 
 // @route   POST /api/bookings/check-availability
 // @desc    Check availability for booking
@@ -105,7 +106,7 @@ router.post('/', protect, [
 // @route   GET /api/bookings
 // @desc    Get user bookings
 // @access  Private
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, autoUpdateCompletedBookings, async (req, res) => {
   try {
     const { status, startDate, endDate } = req.query;
 

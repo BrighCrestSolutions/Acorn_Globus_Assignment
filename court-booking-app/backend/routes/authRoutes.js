@@ -82,6 +82,7 @@ router.post('/send-otp', [
 // @access  Public
 router.post('/verify-otp', [
   body('email').isEmail().withMessage('Please provide a valid email'),
+  body('name').trim().notEmpty().withMessage('Name is required'),
   body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
 ], async (req, res) => {
   try {
@@ -93,7 +94,7 @@ router.post('/verify-otp', [
       });
     }
 
-    const { email, otp } = req.body;
+    const { email, name, otp } = req.body;
 
     // Find user with OTP fields
     const user = await User.findOne({ email }).select('+otp +otpExpire');
@@ -102,6 +103,14 @@ router.post('/verify-otp', [
       return res.status(404).json({
         success: false,
         message: 'User not found. Please request a new OTP.'
+      });
+    }
+
+    // Verify name matches
+    if (user.name !== name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid credentials. Please check your name and try again.'
       });
     }
 

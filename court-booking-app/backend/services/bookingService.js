@@ -23,12 +23,15 @@ const createBooking = async (userId, bookingData) => {
     }
 
     // Step 1: Check availability of all resources
+    // Exclude the current user's reservation from the conflict check
     const availabilityCheck = await checkMultiResourceAvailability(
       courtId,
       coachId,
       equipmentItems,
       new Date(startTime),
-      new Date(endTime)
+      new Date(endTime),
+      null, // excludeBookingId
+      userId // excludeUserId - exclude current user's reservation
     );
 
     if (!availabilityCheck.available) {

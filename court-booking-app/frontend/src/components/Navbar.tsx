@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
-import { Calendar, User, LogOut, LayoutDashboard, Settings } from 'lucide-react';
+import { Calendar, User, LogOut, LayoutDashboard, Settings, Home } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -25,6 +25,12 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
+                <Link to="/">
+                  <Button variant="ghost">
+                    <Home className="h-4 w-4 mr-2" />
+                    Home
+                  </Button>
+                </Link>
                 <Link to="/courts">
                   <Button variant="ghost">Browse Courts</Button>
                 </Link>

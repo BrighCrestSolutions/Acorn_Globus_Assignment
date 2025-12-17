@@ -21,6 +21,9 @@ export const AdminPage: React.FC = () => {
   const [bookingsPage, setBookingsPage] = useState(1);
   const [waitlistPage, setWaitlistPage] = useState(1);
   const itemsPerPage = 10;
+  
+  // Booking status filter
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | 'confirmed' | 'cancelled' | 'completed'>('all');
   const [editingCourt, setEditingCourt] = useState<any>(null);
   const [editingCoach, setEditingCoach] = useState<any>(null);
   const [editingEquipment, setEditingEquipment] = useState<any>(null);
@@ -715,11 +718,51 @@ export const AdminPage: React.FC = () => {
               <CardDescription>View and manage all court bookings - updates automatically</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={loadBookings} className="mb-4" variant="outline">
-                Refresh Now
-              </Button>
+              <div className="flex items-center gap-2 mb-4">
+                <Button onClick={loadBookings} variant="outline" size="sm">
+                  Refresh Now
+                </Button>
+                
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    variant={bookingStatusFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setBookingStatusFilter('all')}
+                    size="sm"
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={bookingStatusFilter === 'confirmed' ? 'default' : 'outline'}
+                    onClick={() => setBookingStatusFilter('confirmed')}
+                    size="sm"
+                    className="bg-green-50 hover:bg-green-100 border-green-200"
+                  >
+                    Confirmed
+                  </Button>
+                  <Button
+                    variant={bookingStatusFilter === 'completed' ? 'default' : 'outline'}
+                    onClick={() => setBookingStatusFilter('completed')}
+                    size="sm"
+                    className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  >
+                    Completed
+                  </Button>
+                  <Button
+                    variant={bookingStatusFilter === 'cancelled' ? 'default' : 'outline'}
+                    onClick={() => setBookingStatusFilter('cancelled')}
+                    size="sm"
+                    className="bg-red-50 hover:bg-red-100 border-red-200"
+                  >
+                    Cancelled
+                  </Button>
+                </div>
+              </div>
+              
               <div className="space-y-3">
-                {bookings.slice((bookingsPage - 1) * itemsPerPage, bookingsPage * itemsPerPage).map((booking: any) => (
+                {bookings
+                  .filter(b => bookingStatusFilter === 'all' || b.status === bookingStatusFilter)
+                  .slice((bookingsPage - 1) * itemsPerPage, bookingsPage * itemsPerPage)
+                  .map((booking: any) => (
                   <div key={booking._id} className="p-4 border rounded-lg">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -766,9 +809,11 @@ export const AdminPage: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                {bookings.length === 0 && <p className="text-gray-500 text-center py-8">No bookings found. Click Refresh to load.</p>}
+                {bookings.filter(b => bookingStatusFilter === 'all' || b.status === bookingStatusFilter).length === 0 && (
+                  <p className="text-gray-500 text-center py-8">No bookings found with selected status.</p>
+                )}
               </div>
-              {bookings.length > itemsPerPage && (
+              {bookings.filter(b => bookingStatusFilter === 'all' || b.status === bookingStatusFilter).length > itemsPerPage && (
                 <div className="flex justify-center items-center gap-2 mt-4">
                   <Button
                     variant="outline" size="sm"
@@ -778,12 +823,12 @@ export const AdminPage: React.FC = () => {
                     Previous
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page {bookingsPage} of {Math.ceil(bookings.length / itemsPerPage)}
+                    Page {bookingsPage} of {Math.ceil(bookings.filter(b => bookingStatusFilter === 'all' || b.status === bookingStatusFilter).length / itemsPerPage)}
                   </span>
                   <Button
                     variant="outline" size="sm"
-                    onClick={() => setBookingsPage(p => Math.min(Math.ceil(bookings.length / itemsPerPage), p + 1))}
-                    disabled={bookingsPage === Math.ceil(bookings.length / itemsPerPage)}
+                    onClick={() => setBookingsPage(p => Math.min(Math.ceil(bookings.filter(b => bookingStatusFilter === 'all' || b.status === bookingStatusFilter).length / itemsPerPage), p + 1))}
+                    disabled={bookingsPage === Math.ceil(bookings.filter(b => bookingStatusFilter === 'all' || b.status === bookingStatusFilter).length / itemsPerPage)}
                   >
                     Next
                   </Button>

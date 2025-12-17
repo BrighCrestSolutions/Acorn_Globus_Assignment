@@ -1,24 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { courtsAPI, equipmentAPI, coachesAPI, bookingsAPI, waitlistAPI, reservationsAPI } from '../services/api';
+import { courtsAPI, equipmentAPI, coachesAPI, bookingsAPI, waitlistAPI } from '../services/api';
 import type { Court, Equipment, Coach, TimeSlot } from '../types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Label } from '../components/ui/label';
-import { Input } from '../components/ui/input';
-import { Calendar, Clock, ShoppingCart, User, Check, ArrowRight, Loader2, X } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Calendar, X } from 'lucide-react';
+import { format } from 'date-fns';
+
+// Import modularized components
+import {
+  BookingStepIndicator,
+  CourtInfoCard,
+  DateTimeSelector,
+  EquipmentSelector,
+  CoachSelector,
+  BookingSummary,
+  BookingSidebar,
+  WaitlistModal
+} from '../features/booking/components';
+
+// Import custom hooks
+import { useReservation, useSlotPolling, useBookingSteps } from '../features/booking/hooks';
 
 export const BookingPage: React.FC = () => {
   const { courtId } = useParams<{ courtId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1);
+  // Use custom hooks
+  const { step, setStep } = useBookingSteps();
+  const { reservationError, createReservation, releaseReservation } = useReservation(step);
+
+  // State management
   const [court, setCourt] = useState<Court | null>(null);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -36,13 +52,9 @@ export const BookingPage: React.FC = () => {
   // Waitlist modal state
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [waitlistSlot, setWaitlistSlot] = useState<TimeSlot | null>(null);
-  const [waitlistEquipment, setWaitlistEquipment] = useState<Array<{ item: string; quantity: number }>>([]);
-  const [waitlistCoach, setWaitlistCoach] = useState<string | null>(null);
-  const [waitlistNotes, setWaitlistNotes] = useState('');
-  const [waitlistPhone, setWaitlistPhone] = useState('');
   
-  // Reservation state
-  const [reservationId, setReservationId] = useState<string | null>(null);
+  // Use slot polling hook
+  const { slots, refreshSlots } = useSlotPolling(courtId, selectedDate, step, !!court);
 
   useEffect(() => {
     if (!user) {
@@ -58,58 +70,18 @@ export const BookingPage: React.FC = () => {
     loadCoaches();
   }, [courtId, user]);
 
-  // Extend reservation when user moves to final step
-  useEffect(() => {
-    if (step === 4 && reservationId) {
-      reservationsAPI.extend(reservationId).catch(err => {
-        console.error('Failed to extend reservation:', err);
-      });
-    }
-  }, [step, reservationId]);
-
-  // Cleanup reservation on unmount or when going back to step 1
-  useEffect(() => {
-    return () => {
-      if (reservationId) {
-        reservationsAPI.release(reservationId).catch(err => {
-          console.error('Failed to release reservation:', err);
-        });
-      }
-    };
-  }, [reservationId]);
-
-  useEffect(() => {
-    if (step === 1 && reservationId) {
-      // Release reservation if user goes back to slot selection
-      reservationsAPI.release(reservationId).catch(err => {
-        console.error('Failed to release reservation:', err);
-      });
-      setReservationId(null);
-    }
-  }, [step]);
-
-  useEffect(() => {
-    if (court) {
-      loadAvailability();
-    }
-  }, [selectedDate, court]);
-
-  // Polling for availability updates every 10 seconds when on step 1
-  useEffect(() => {
-    if (step === 1 && court) {
-      const pollInterval = setInterval(() => {
-        loadAvailability();
-      }, 10000); // Poll every 10 seconds
-
-      return () => clearInterval(pollInterval);
-    }
-  }, [step, court, selectedDate]);
-
   useEffect(() => {
     if (selectedSlot) {
       fetchPricing();
     }
   }, [selectedSlot, selectedEquipment, selectedCoach]);
+
+  // Handle reservation errors
+  useEffect(() => {
+    if (reservationError) {
+      setError(reservationError);
+    }
+  }, [reservationError]);
 
   const loadCourtDetails = async () => {
     try {
@@ -127,15 +99,6 @@ export const BookingPage: React.FC = () => {
     } catch (error) {
       console.error('Error loading court:', error);
       setError('Failed to load court details');
-    }
-  };
-
-  const loadAvailability = async () => {
-    try {
-      const response = await courtsAPI.getAvailability(courtId!, selectedDate);
-      setSlots(response.data.slots);
-    } catch (error) {
-      console.error('Error loading availability:', error);
     }
   };
 
@@ -180,64 +143,46 @@ export const BookingPage: React.FC = () => {
       
       // Create reservation for this slot
       try {
-        const response = await reservationsAPI.create({
+        await createReservation({
           courtId: courtId!,
           startTime: typeof slot.startTime === 'string' ? slot.startTime : new Date(slot.startTime).toISOString(),
           endTime: typeof slot.endTime === 'string' ? slot.endTime : new Date(slot.endTime).toISOString()
         });
         
-        setReservationId(response.data.reservation._id);
         setStep(2);
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to reserve slot');
-        // If reservation fails, still allow them to proceed but warn
-        if (err.response?.status === 400) {
-          alert(err.response?.data?.message || 'This slot may no longer be available');
-          loadAvailability(); // Refresh slots
-        } else {
-          setStep(2); // Continue anyway for other errors
-        }
+        setError(err.message || 'Failed to reserve slot');
+        refreshSlots(); // Refresh slots to show updated availability
       }
     }
   };
 
   const handleJoinWaitlist = (slot: TimeSlot) => {
     setWaitlistSlot(slot);
-    setWaitlistEquipment([]);
-    setWaitlistCoach(null);
-    setWaitlistNotes('');
-    setWaitlistPhone(user?.phone || '');
     setShowWaitlistModal(true);
   };
 
-  const submitWaitlist = async () => {
-    // Validate phone number
-    if (!waitlistPhone || waitlistPhone.trim().length < 10) {
-      setError('Please enter a valid phone number (at least 10 digits)');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
+  const handleWaitlistSubmit = async (data: {
+    phone: string;
+    equipment: Array<{ item: string; quantity: number }>;
+    coachId: string | null;
+    notes: string;
+  }) => {
     try {
       const response = await waitlistAPI.join({
         courtId: courtId!,
         desiredDate: selectedDate,
         desiredStartTime: format(new Date(waitlistSlot!.startTime), 'HH:mm'),
         desiredEndTime: format(new Date(waitlistSlot!.endTime), 'HH:mm'),
-        equipmentItems: waitlistEquipment,
-        coachId: waitlistCoach,
-        phone: waitlistPhone,
-        notes: waitlistNotes
+        equipmentItems: data.equipment,
+        coachId: data.coachId,
+        phone: data.phone,
+        notes: data.notes
       });
 
-      alert(`Successfully joined waitlist! You are #${response.data.waitlistEntry.position} in queue. We'll notify you via ${waitlistPhone} if a spot opens up.`);
-      setShowWaitlistModal(false);
+      alert(`Successfully joined waitlist! You are #${response.data.waitlistEntry.position} in queue. We'll notify you via ${data.phone} if a spot opens up.`);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to join waitlist');
-    } finally {
-      setLoading(false);
+      throw new Error(err.response?.data?.message || 'Failed to join waitlist');
     }
   };
 
@@ -254,23 +199,6 @@ export const BookingPage: React.FC = () => {
 
   const updateEquipmentQuantity = (equipmentId: string, quantity: number) => {
     setSelectedEquipment(prev => 
-      prev.map(e => e.item === equipmentId ? { ...e, quantity } : e)
-    );
-  };
-
-  const toggleWaitlistEquipment = (equipmentId: string) => {
-    setWaitlistEquipment(prev => {
-      const existing = prev.find(e => e.item === equipmentId);
-      if (existing) {
-        return prev.filter(e => e.item !== equipmentId);
-      } else {
-        return [...prev, { item: equipmentId, quantity: 1 }];
-      }
-    });
-  };
-
-  const updateWaitlistEquipmentQuantity = (equipmentId: string, quantity: number) => {
-    setWaitlistEquipment(prev => 
       prev.map(e => e.item === equipmentId ? { ...e, quantity } : e)
     );
   };
@@ -300,11 +228,7 @@ export const BookingPage: React.FC = () => {
       await bookingsAPI.create(bookingData);
       
       // Release reservation after successful booking
-      if (reservationId) {
-        reservationsAPI.release(reservationId).catch(err => {
-          console.error('Failed to release reservation:', err);
-        });
-      }
+      await releaseReservation();
       
       navigate('/dashboard?success=true');
     } catch (err: any) {
@@ -363,26 +287,9 @@ export const BookingPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Book {court.name}</h1>
-        <p className="text-muted-foreground">Complete your booking in a few simple steps</p>
-      </div>
+      <CourtInfoCard court={court} />
 
-      {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-8">
-        {[1, 2, 3, 4].map((s) => (
-          <div key={s} className="flex items-center flex-1">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              step >= s ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
-              {step > s ? <Check className="h-5 w-5" /> : s}
-            </div>
-            {s < 4 && (
-              <div className={`flex-1 h-1 mx-2 ${step > s ? 'bg-primary' : 'bg-gray-200'}`} />
-            )}
-          </div>
-        ))}
-      </div>
+      <BookingStepIndicator currentStep={step} />
 
       {error && (
         <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md mb-6 flex items-start justify-between gap-3">
@@ -401,478 +308,80 @@ export const BookingPage: React.FC = () => {
         <div className="lg:col-span-2">
           {/* Step 1: Select Date & Time */}
           {step === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Select Date & Time
-                </CardTitle>
-                <CardDescription>Choose your preferred date and time slot</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={selectedDate}
-                    min={format(new Date(), 'yyyy-MM-dd')}
-                    max={format(addDays(new Date(), 30), 'yyyy-MM-dd')}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label>Available Time Slots (1-hour blocks)</Label>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                      Auto-refreshing...
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    💡 Tip: Book multiple consecutive hours by selecting different slots separately. Pricing applies per hour with dynamic rules.
-                  </p>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {slots.map((slot, idx) => {
-                      const slotData = slot as any;
-                      const isReservedByOther = slotData.isReserved && !slotData.reservedByMe;
-                      const isReservedByMe = slotData.reservedByMe;
-                      
-                      return (
-                        <div key={idx} className="space-y-1">
-                          <Button
-                            variant={selectedSlot === slot ? 'default' : slot.available ? 'outline' : 'ghost'}
-                            disabled={!slot.available}
-                            onClick={() => handleSlotSelect(slot)}
-                            className={`w-full ${
-                              slotData.isPast ? 'opacity-40 cursor-not-allowed' : 
-                              isReservedByOther ? 'opacity-60 border-orange-300' :
-                              isReservedByMe ? 'border-blue-500 bg-blue-50' : ''
-                            }`}
-                          >
-                            <Clock className="h-4 w-4 mr-1" />
-                            {format(new Date(slot.startTime), 'HH:mm')}
-                            {slotData.isPast && <span className="ml-1 text-[10px]">(Past)</span>}
-                            {isReservedByOther && <span className="ml-1 text-[10px]">(Reserved)</span>}
-                            {isReservedByMe && <span className="ml-1 text-[10px]">(Holding)</span>}
-                          </Button>
-                          {!slot.available && !slotData.isPast && !isReservedByOther && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="w-full text-xs h-7"
-                              onClick={() => handleJoinWaitlist(slot)}
-                              disabled={loading}
-                            >
-                              Join Waitlist
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {slots.length === 0 && (
-                    <p className="text-sm text-muted-foreground mt-2">No slots available for this date</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <DateTimeSelector
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              slots={slots}
+              selectedSlot={selectedSlot}
+              onSlotSelect={handleSlotSelect}
+              onJoinWaitlist={handleJoinWaitlist}
+              loading={loading}
+            />
           )}
 
           {/* Step 2: Select Equipment */}
           {step === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Select Equipment (Optional)
-                </CardTitle>
-                <CardDescription>Add rackets, shoes, or other equipment</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {equipment.map((item) => {
-                  const selected = selectedEquipment.find(e => e.item === item._id);
-                  return (
-                    <div key={item._id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-sm text-muted-foreground">{item.description}</div>
-                        <div className="text-sm font-semibold text-primary mt-1">
-                          ₹{item.hourlyRate}/hour
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {selected ? (
-                          <>
-                            <Input
-                              type="number"
-                              min="1"
-                              max={item.availableQuantity}
-                              value={selected.quantity}
-                              onChange={(e) => updateEquipmentQuantity(item._id, parseInt(e.target.value))}
-                              className="w-20"
-                            />
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => toggleEquipment(item._id)}
-                            >
-                              Remove
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            onClick={() => toggleEquipment(item._id)}
-                            disabled={item.availableQuantity === 0}
-                          >
-                            Add
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="flex space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-                  <Button onClick={() => setStep(3)} className="flex-1">
-                    Continue <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <EquipmentSelector
+              equipment={equipment}
+              selectedEquipment={selectedEquipment}
+              onToggleEquipment={toggleEquipment}
+              onUpdateQuantity={updateEquipmentQuantity}
+              onBack={() => setStep(1)}
+              onContinue={() => setStep(3)}
+            />
           )}
 
           {/* Step 3: Select Coach */}
           {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  Select Coach (Optional)
-                </CardTitle>
-                <CardDescription>Book a professional coach for your session</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {coaches.map((coach) => (
-                  <div
-                    key={coach._id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      selectedCoach === coach._id ? 'border-primary bg-primary/5' : 'hover:border-gray-400'
-                    }`}
-                    onClick={() => setSelectedCoach(selectedCoach === coach._id ? null : coach._id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-semibold text-lg">{coach.name}</div>
-                        <div className="text-sm text-muted-foreground mb-2">{coach.bio}</div>
-                        <div className="flex flex-wrap gap-1">
-                          {coach.specialties.map((spec, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                              {spec}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">₹{coach.hourlyRate}</div>
-                        <div className="text-xs text-muted-foreground">/hour</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <div className="flex space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-                  <Button onClick={() => setStep(4)} className="flex-1">
-                    Continue <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <CoachSelector
+              coaches={coaches}
+              selectedCoach={selectedCoach}
+              onSelectCoach={setSelectedCoach}
+              onBack={() => setStep(2)}
+              onContinue={() => setStep(4)}
+            />
           )}
 
           {/* Step 4: Review & Confirm */}
           {step === 4 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Review Your Booking</CardTitle>
-                <CardDescription>Verify all details before confirming</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="phone">Contact Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    We'll use this to contact you about your booking
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                  <Input
-                    id="notes"
-                    placeholder="Any special requests or notes..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </div>
-                <div className="flex space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setStep(3)}>Back</Button>
-                  <Button onClick={handleBooking} disabled={loading} className="flex-1">
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4 mr-2" />
-                        Confirm Booking
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <BookingSummary
+              phone={phone}
+              notes={notes}
+              onPhoneChange={setPhone}
+              onNotesChange={setNotes}
+              onBack={() => setStep(3)}
+              onConfirm={handleBooking}
+              loading={loading}
+            />
           )}
         </div>
 
         {/* Summary Sidebar */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-20">
-            <CardHeader>
-              <CardTitle>Booking Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="text-sm text-muted-foreground">Court</div>
-                <div className="font-semibold">{court.name}</div>
-              </div>
-              
-              {selectedSlot && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Date & Time</div>
-                  <div className="font-semibold">
-                    {format(new Date(selectedSlot.startTime), 'MMM dd, yyyy')}
-                  </div>
-                  <div className="text-sm">
-                    {format(new Date(selectedSlot.startTime), 'HH:mm')} - {format(new Date(selectedSlot.endTime), 'HH:mm')}
-                  </div>
-                </div>
-              )}
-
-              {selectedEquipment.length > 0 && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Equipment</div>
-                  {selectedEquipment.map((item) => {
-                    const eq = equipment.find(e => e._id === item.item);
-                    return eq ? (
-                      <div key={item.item} className="text-sm">
-                        {eq.name} × {item.quantity}
-                      </div>
-                    ) : null;
-                  })}
-                </div>
-              )}
-
-              {selectedCoach && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Coach</div>
-                  <div className="font-semibold">
-                    {coaches.find(c => c._id === selectedCoach)?.name}
-                  </div>
-                </div>
-              )}
-
-              {pricing && (
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Court Fee</span>
-                    <span>₹{pricing.courtFee}</span>
-                  </div>
-                  {pricing.equipmentFee > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Equipment Fee</span>
-                      <span>₹{pricing.equipmentFee}</span>
-                    </div>
-                  )}
-                  {pricing.coachFee > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Coach Fee</span>
-                      <span>₹{pricing.coachFee}</span>
-                    </div>
-                  )}
-                  {pricing.appliedRules && pricing.appliedRules.length > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      Applied: {pricing.appliedRules.map((r: any) => r.ruleName).join(', ')}
-                    </div>
-                  )}
-                  <div className="flex justify-between text-lg font-bold border-t pt-2">
-                    <span>Total</span>
-                    <span className="text-primary">₹{pricing.finalTotal}</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <BookingSidebar
+            court={court}
+            selectedSlot={selectedSlot}
+            selectedEquipment={selectedEquipment}
+            equipment={equipment}
+            selectedCoach={selectedCoach}
+            coaches={coaches}
+            pricing={pricing}
+          />
         </div>
       </div>
 
       {/* Waitlist Modal */}
-      {showWaitlistModal && waitlistSlot && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle>Join Waitlist</CardTitle>
-              <CardDescription>
-                Join waitlist for {format(new Date(waitlistSlot.startTime), 'HH:mm')} - {format(new Date(waitlistSlot.endTime), 'HH:mm')} on {selectedDate}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Phone Number */}
-              <div>
-                <Label htmlFor="waitlist-phone">Phone Number *</Label>
-                <Input
-                  id="waitlist-phone"
-                  type="tel"
-                  value={waitlistPhone}
-                  onChange={(e) => setWaitlistPhone(e.target.value)}
-                  placeholder="Enter your phone number"
-                  required
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  We'll notify you if a spot opens up
-                </p>
-              </div>
-
-              {/* Equipment Selection */}
-              <div>
-                <Label>Equipment (Optional)</Label>
-                <div className="space-y-2 mt-2">
-                  {equipment.map((item) => {
-                    const selected = waitlistEquipment.find(e => e.item === item._id);
-                    return (
-                      <div key={item._id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{item.name}</div>
-                          <div className="text-xs text-muted-foreground">₹{item.hourlyRate}/hour</div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {selected ? (
-                            <>
-                              <Input
-                                type="number"
-                                min="1"
-                                max={item.availableQuantity}
-                                value={selected.quantity}
-                                onChange={(e) => updateWaitlistEquipmentQuantity(item._id, parseInt(e.target.value))}
-                                className="w-16 h-8 text-sm"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleWaitlistEquipment(item._id)}
-                              >
-                                Remove
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleWaitlistEquipment(item._id)}
-                            >
-                              Add
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Coach Selection */}
-              <div>
-                <Label>Coach (Optional)</Label>
-                <div className="space-y-2 mt-2">
-                  {coaches.map((coach) => (
-                    <div
-                      key={coach._id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                        waitlistCoach === coach._id ? 'border-primary bg-primary/5' : 'hover:border-gray-400'
-                      }`}
-                      onClick={() => setWaitlistCoach(waitlistCoach === coach._id ? null : coach._id)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium">{coach.name}</div>
-                          <div className="text-sm text-muted-foreground">{coach.email}</div>
-                        </div>
-                        <div className="text-sm font-semibold text-primary">
-                          ₹{coach.hourlyRate}/hour
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <Label htmlFor="waitlist-notes">Additional Notes (Optional)</Label>
-                <Input
-                  id="waitlist-notes"
-                  value={waitlistNotes}
-                  onChange={(e) => setWaitlistNotes(e.target.value)}
-                  placeholder="Any special requirements or preferences"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowWaitlistModal(false);
-                    setError('');
-                  }}
-                  disabled={loading}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={submitWaitlist}
-                  disabled={loading}
-                  className="flex-1"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Joining...
-                    </>
-                  ) : (
-                    'Join Waitlist'
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {waitlistSlot && (
+        <WaitlistModal
+          isOpen={showWaitlistModal}
+          onClose={() => setShowWaitlistModal(false)}
+          slot={waitlistSlot}
+          selectedDate={selectedDate}
+          equipment={equipment}
+          coaches={coaches}
+          defaultPhone={user?.phone || ''}
+          onSubmit={handleWaitlistSubmit}
+        />
       )}
     </div>
   );

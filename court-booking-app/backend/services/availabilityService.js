@@ -14,17 +14,13 @@ const checkCourtAvailability = async (courtId, startTime, endTime, excludeBookin
     return false; // Court is frozen or disabled
   }
 
+  // Use standard interval overlap formula: intervals [a1,a2) and [b1,b2) overlap if a1 < b2 AND b1 < a2
+  // This correctly allows consecutive bookings (e.g., 1-2 PM, then 2-3 PM)
   const query = {
     court: courtId,
     status: { $in: ['confirmed', 'pending'] },
-    $or: [
-      // New booking starts during existing booking
-      { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
-      // New booking ends during existing booking
-      { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
-      // New booking completely contains existing booking
-      { startTime: { $gte: startTime }, endTime: { $lte: endTime } }
-    ]
+    startTime: { $lt: endTime },      // existing starts before new ends
+    endTime: { $gt: startTime }        // existing ends after new starts
   };
 
   if (excludeBookingId) {
@@ -34,15 +30,13 @@ const checkCourtAvailability = async (courtId, startTime, endTime, excludeBookin
   const conflictingBookings = await Booking.find(query);
   
   // Also check for active reservations by other users
+  // Use same overlap formula for consistency
   const reservationQuery = {
     court: courtId,
     status: 'active',
     expiresAt: { $gt: new Date() },
-    $or: [
-      { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
-      { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
-      { startTime: { $gte: startTime }, endTime: { $lte: endTime } }
-    ]
+    startTime: { $lt: endTime },      // reservation starts before new ends
+    endTime: { $gt: startTime }        // reservation ends after new starts
   };
 
   // Exclude reservations by the current user
@@ -59,14 +53,12 @@ const checkCourtAvailability = async (courtId, startTime, endTime, excludeBookin
 const checkCoachAvailability = async (coachId, startTime, endTime, excludeBookingId = null) => {
   if (!coachId) return true;
 
+  // Use standard overlap formula for coach availability too
   const query = {
     coach: coachId,
     status: { $in: ['confirmed', 'pending'] },
-    $or: [
-      { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
-      { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
-      { startTime: { $gte: startTime }, endTime: { $lte: endTime } }
-    ]
+    startTime: { $lt: endTime },
+    endTime: { $gt: startTime }
   };
 
   if (excludeBookingId) {
@@ -82,15 +74,12 @@ const checkEquipmentAvailability = async (equipmentItems, startTime, endTime, ex
   if (!equipmentItems || equipmentItems.length === 0) return { available: true };
 
   for (const item of equipmentItems) {
-    // Get all bookings that overlap with the requested time
+    // Get all bookings that overlap with the requested time using standard formula
     const query = {
       'equipment.item': item.item,
       status: { $in: ['confirmed', 'pending'] },
-      $or: [
-        { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
-        { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
-        { startTime: { $gte: startTime }, endTime: { $lte: endTime } }
-      ]
+      startTime: { $lt: endTime },
+      endTime: { $gt: startTime }
     };
 
     if (excludeBookingId) {

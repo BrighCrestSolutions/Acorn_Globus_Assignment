@@ -39,7 +39,7 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await authAPI.verifyOTP(email, otp);
+      const response = await authAPI.verifyOTP(email, name, otp);
       const { token, user } = response.data;
       login(token, user);
       navigate('/');
