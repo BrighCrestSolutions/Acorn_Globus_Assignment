@@ -23,29 +23,34 @@ router.post('/send-otp', [
 
     const { email, name } = req.body;
 
+    // Find user with matching email and name
+    let user = await User.findOne({ email });
+
+    // If user exists, verify name matches
+    if (user) {
+      if (user.name !== name) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid credentials. Please check your name and email.'
+        });
+      }
+    } else {
+      // Create new user if doesn't exist
+      user = await User.create({
+        email,
+        name,
+        isVerified: false
+      });
+    }
+
     // Generate OTP (use fixed OTP in development mode)
     const otp = process.env.NODE_ENV === 'development' ? '123456' : generateOTP();
     const otpExpire = new Date(Date.now() + parseInt(process.env.OTP_EXPIRE_MINUTES || 10) * 60 * 1000);
 
-    // Find or create user
-    let user = await User.findOne({ email });
-
-    if (user) {
-      // Update existing user with new OTP
-      user.otp = otp;
-      user.otpExpire = otpExpire;
-      if (!user.name) user.name = name;
-      await user.save();
-    } else {
-      // Create new user
-      user = await User.create({
-        email,
-        name,
-        otp,
-        otpExpire,
-        isVerified: false
-      });
-    }
+    // Update user with OTP
+    user.otp = otp;
+    user.otpExpire = otpExpire;
+    await user.save();
 
     // Send OTP via email (skip in development mode)
     let emailResult = { success: true };

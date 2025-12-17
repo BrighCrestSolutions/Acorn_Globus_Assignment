@@ -146,6 +146,8 @@ export const LoginPage: React.FC = () => {
                   setStep('email');
                   setOtp('');
                   setError('');
+                  setName('');
+                  setEmail('');
                 }}
               >
                 Back to Email
