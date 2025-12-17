@@ -35,52 +35,55 @@ export const CourtsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading courts...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-sm sm:text-base text-muted-foreground">Loading courts...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Browse Courts</h1>
-        <p className="text-muted-foreground">Choose from our premium badminton courts</p>
+    <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Browse Courts</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Choose from our premium badminton courts</p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex space-x-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <Button
           variant={filter === 'all' ? 'default' : 'outline'}
           onClick={() => setFilter('all')}
+          className="text-sm sm:text-base h-9 sm:h-10"
         >
           All Courts
         </Button>
         <Button
           variant={filter === 'indoor' ? 'default' : 'outline'}
           onClick={() => setFilter('indoor')}
+          className="text-sm sm:text-base h-9 sm:h-10"
         >
           Indoor
         </Button>
         <Button
           variant={filter === 'outdoor' ? 'default' : 'outline'}
           onClick={() => setFilter('outdoor')}
+          className="text-sm sm:text-base h-9 sm:h-10"
         >
           Outdoor
         </Button>
       </div>
 
       {/* Courts Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {courts.map((court) => (
           <Card key={court._id} className={`hover:shadow-lg transition-shadow ${court.status === 'maintenance' ? 'opacity-75' : ''}`}>
             <CardHeader>
-              <div className="flex justify-between items-start mb-2">
-                <CardTitle className="text-xl">{court.name}</CardTitle>
-                <div className="flex gap-2">
+              <div className="flex justify-between items-start mb-2 gap-2">
+                <CardTitle className="text-lg sm:text-xl">{court.name}</CardTitle>
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     court.type === 'indoor' 
                       ? 'bg-blue-100 text-blue-800' 
@@ -103,16 +106,16 @@ export const CourtsPage: React.FC = () => {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <div className="text-3xl font-bold text-primary mb-1">
-                    ₹{court.hourlyBaseRate}<span className="text-sm text-muted-foreground">/hour</span>
+                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">
+                    ₹{court.hourlyBaseRate}<span className="text-xs sm:text-sm text-muted-foreground">/hour</span>
                   </div>
                   <p className="text-xs text-muted-foreground">Base rate (dynamic pricing applies)</p>
                 </div>
 
                 {court.features && court.features.length > 0 && (
                   <div>
-                    <p className="text-sm font-semibold mb-2">Features:</p>
-                    <ul className="text-sm space-y-1">
+                    <p className="text-xs sm:text-sm font-semibold mb-2">Features:</p>
+                    <ul className="text-xs sm:text-sm space-y-1">
                       {court.features.slice(0, 3).map((feature, idx) => (
                         <li key={idx} className="flex items-center text-muted-foreground">
                           <Star className="h-3 w-3 mr-2 text-yellow-500" />
@@ -125,7 +128,7 @@ export const CourtsPage: React.FC = () => {
 
                 {court.status === 'maintenance' ? (
                   <Button 
-                    className="w-full" 
+                    className="w-full h-10 sm:h-11 text-sm sm:text-base" 
                     disabled
                     variant="outline"
                   >
@@ -133,10 +136,10 @@ export const CourtsPage: React.FC = () => {
                   </Button>
                 ) : (
                   <Button 
-                    className="w-full" 
+                    className="w-full h-10 sm:h-11 text-sm sm:text-base" 
                     onClick={() => handleBookCourt(court._id)}
                   >
-                    <Calendar className="h-4 w-4 mr-2" />
+                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     Book Now
                   </Button>
                 )}

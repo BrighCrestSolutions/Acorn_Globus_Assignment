@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { WarpBackground } from '../components/ui/warp-background';
 import { Calendar, Mail, User, Lock } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -86,22 +87,23 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="h-12 w-12 bg-primary rounded-full flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6 md:p-8">
+      <WarpBackground className="w-full max-w-md bg-white/95 backdrop-blur-sm">
+        <Card className="border-0 shadow-none bg-transparent">
+          <CardHeader className="space-y-1 text-center px-4 sm:px-6">
+          <div className="flex justify-center mb-3 sm:mb-4">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary rounded-full flex items-center justify-center">
+              <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome to Court Booking</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold">Welcome to Court Booking</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             {showAdminLogin 
               ? 'Admin login with OTP verification' 
               : 'Sign in with your Google account to get started'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {!showAdminLogin ? (
             <div className="space-y-4">
               {error && (
@@ -111,7 +113,7 @@ export const LoginPage: React.FC = () => {
               )}
               <Button 
                 onClick={handleGoogleSignIn} 
-                className="w-full flex items-center justify-center gap-3 h-12"
+                className="w-full flex items-center justify-center gap-2 sm:gap-3 h-11 sm:h-12 text-sm sm:text-base"
                 disabled={loading}
                 variant="outline"
               >
@@ -119,7 +121,7 @@ export const LoginPage: React.FC = () => {
                   'Signing in...'
                 ) : (
                   <>
-                    <svg className="h-5 w-5" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
                       <path
                         fill="currentColor"
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -154,12 +156,12 @@ export const LoginPage: React.FC = () => {
               <Button
                 type="button"
                 variant="link"
-                className="w-full text-sm"
+                className="w-full text-xs sm:text-sm"
                 onClick={() => setShowAdminLogin(true)}
               >
                 Not a user? Admin login here
               </Button>
-              <p className="text-xs text-center text-muted-foreground">
+              <p className="text-xs sm:text-sm text-center text-muted-foreground">
                 By continuing, you agree to our Terms of Service and Privacy Policy
               </p>
             </div>
@@ -200,13 +202,13 @@ export const LoginPage: React.FC = () => {
                   {error}
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base" disabled={loading}>
                 {loading ? 'Sending...' : 'Send OTP'}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full"
+                className="w-full text-sm sm:text-base"
                 onClick={() => {
                   setShowAdminLogin(false);
                   setError('');
@@ -227,14 +229,14 @@ export const LoginPage: React.FC = () => {
                     id="otp"
                     type="text"
                     placeholder="Enter 6-digit OTP"
-                    className="pl-9 text-center text-lg tracking-widest"
+                    className="pl-9 text-center text-base sm:text-lg tracking-widest"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     maxLength={6}
                     required
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   OTP sent to {email}
                 </p>
               </div>
@@ -243,13 +245,13 @@ export const LoginPage: React.FC = () => {
                   {error}
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
+              <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base" disabled={loading || otp.length !== 6}>
                 {loading ? 'Verifying...' : 'Verify & Login'}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full"
+                className="w-full text-sm sm:text-base"
                 onClick={() => {
                   setStep('email');
                   setOtp('');
@@ -261,7 +263,8 @@ export const LoginPage: React.FC = () => {
             </form>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </WarpBackground>
     </div>
   );
 };

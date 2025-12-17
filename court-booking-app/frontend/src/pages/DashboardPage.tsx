@@ -102,43 +102,44 @@ export const DashboardPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading bookings...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-sm sm:text-base text-muted-foreground">Loading bookings...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {showSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
+        <div className="bg-green-50 border border-green-200 text-green-800 px-3 sm:px-4 py-3 rounded-md mb-4 sm:mb-6 flex items-center justify-between text-sm sm:text-base">
           <div className="flex items-center">
-            <CheckCircle className="h-5 w-5 mr-2" />
+            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             <span>Booking confirmed successfully!</span>
           </div>
           <button onClick={() => setShowSuccess(false)} className="text-green-600 hover:text-green-800">
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
         </div>
       )}
 
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">My Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {user?.name}!</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">My Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Welcome back, {user?.name}!</p>
       </div>
 
       {/* View Type Toggle */}
-      <div className="mb-6">
-        <div className="flex space-x-2">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={viewType === 'bookings' ? 'default' : 'outline'}
             onClick={() => {
               setViewType('bookings');
               setCurrentPage(1);
             }}
+            className="text-sm sm:text-base h-9 sm:h-10"
           >
             My Bookings
           </Button>
@@ -148,6 +149,7 @@ export const DashboardPage: React.FC = () => {
               setViewType('waitlist');
               setCurrentPage(1);
             }}
+            className="text-sm sm:text-base h-9 sm:h-10"
           >
             Waitlist
           </Button>
@@ -156,14 +158,15 @@ export const DashboardPage: React.FC = () => {
 
       {/* Filter Tabs */}
       {viewType === 'bookings' ? (
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3 mb-4 sm:mb-6">
           <div>
-            <h3 className="text-sm font-medium mb-2 text-muted-foreground">Time Filter</h3>
-            <div className="flex space-x-2">
+            <h3 className="text-xs sm:text-sm font-medium mb-2 text-muted-foreground">Time Filter</h3>
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
                 onClick={() => setFilter('all')}
                 size="sm"
+                className="text-xs sm:text-sm"
               >
                 All Bookings
               </Button>
@@ -171,6 +174,7 @@ export const DashboardPage: React.FC = () => {
                 variant={filter === 'upcoming' ? 'default' : 'outline'}
                 onClick={() => setFilter('upcoming')}
                 size="sm"
+                className="text-xs sm:text-sm"
               >
                 Upcoming
               </Button>
@@ -178,6 +182,7 @@ export const DashboardPage: React.FC = () => {
                 variant={filter === 'past' ? 'default' : 'outline'}
                 onClick={() => setFilter('past')}
                 size="sm"
+                className="text-xs sm:text-sm"
               >
                 Past
               </Button>
@@ -185,12 +190,13 @@ export const DashboardPage: React.FC = () => {
           </div>
           
           <div>
-            <h3 className="text-sm font-medium mb-2 text-muted-foreground">Status Filter</h3>
-            <div className="flex space-x-2">
+            <h3 className="text-xs sm:text-sm font-medium mb-2 text-muted-foreground">Status Filter</h3>
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={statusFilter === 'all' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('all')}
                 size="sm"
+                className="text-xs sm:text-sm"
               >
                 All Status
               </Button>
@@ -198,7 +204,7 @@ export const DashboardPage: React.FC = () => {
                 variant={statusFilter === 'confirmed' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('confirmed')}
                 size="sm"
-                className="bg-green-50 hover:bg-green-100 border-green-200"
+                className="text-xs sm:text-sm bg-green-50 hover:bg-green-100 border-green-200"
               >
                 Confirmed
               </Button>
@@ -206,7 +212,7 @@ export const DashboardPage: React.FC = () => {
                 variant={statusFilter === 'completed' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('completed')}
                 size="sm"
-                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                className="text-xs sm:text-sm bg-blue-50 hover:bg-blue-100 border-blue-200"
               >
                 Completed
               </Button>
@@ -214,7 +220,7 @@ export const DashboardPage: React.FC = () => {
                 variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('cancelled')}
                 size="sm"
-                className="bg-red-50 hover:bg-red-100 border-red-200"
+                className="text-xs sm:text-sm bg-red-50 hover:bg-red-100 border-red-200"
               >
                 Cancelled
               </Button>
@@ -276,56 +282,56 @@ export const DashboardPage: React.FC = () => {
           {bookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((booking) => (
           <Card key={booking._id}>
             <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center">
-                    <MapPin className="h-5 w-5 mr-2 text-primary" />
-                    {booking.court.name}
+              <div className="flex justify-between items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="flex items-center text-lg sm:text-xl">
+                    <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary flex-shrink-0" />
+                    <span className="truncate">{booking.court.name}</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     Booking ID: {booking._id.slice(-8)}
                   </CardDescription>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(booking.status)}`}>
+                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getStatusBadge(booking.status)}`}>
                   {booking.status}
                 </span>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                 <div>
-                  <div className="flex items-center text-sm text-muted-foreground mb-1">
-                    <Calendar className="h-4 w-4 mr-1" />
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-1">
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Date
                   </div>
-                  <div className="font-semibold">
+                  <div className="font-semibold text-sm sm:text-base">
                     {format(new Date(booking.startTime), 'MMM dd, yyyy')}
                   </div>
                 </div>
                 <div>
-                  <div className="flex items-center text-sm text-muted-foreground mb-1">
-                    <Clock className="h-4 w-4 mr-1" />
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-1">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Time
                   </div>
-                  <div className="font-semibold">
+                  <div className="font-semibold text-sm sm:text-base">
                     {format(new Date(booking.startTime), 'HH:mm')} - {format(new Date(booking.endTime), 'HH:mm')}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Duration</div>
-                  <div className="font-semibold">{booking.duration} hour(s)</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Duration</div>
+                  <div className="font-semibold text-sm sm:text-base">{booking.duration} hour(s)</div>
                 </div>
               </div>
 
               {booking.equipment && booking.equipment.length > 0 && (
                 <div className="mb-4">
-                  <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <Package className="h-4 w-4 mr-1" />
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2">
+                    <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Equipment
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {booking.equipment.map((eq, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-gray-100 text-sm rounded">
+                      <span key={idx} className="px-2 py-1 bg-gray-100 text-xs sm:text-sm rounded">
                         {eq.item.name} × {eq.quantity}
                       </span>
                     ))}
@@ -335,18 +341,18 @@ export const DashboardPage: React.FC = () => {
 
               {booking.coach && (
                 <div className="mb-4">
-                  <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <User className="h-4 w-4 mr-1" />
+                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2">
+                    <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Coach
                   </div>
-                  <div className="font-semibold">{booking.coach.name}</div>
+                  <div className="font-semibold text-sm sm:text-base">{booking.coach.name}</div>
                 </div>
               )}
 
-              <div className="flex justify-between items-center pt-4 border-t">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 pt-4 border-t">
                 <div>
-                  <div className="text-sm text-muted-foreground">Total Amount</div>
-                  <div className="text-2xl font-bold text-primary">
+                  <div className="text-xs sm:text-sm text-muted-foreground">Total Amount</div>
+                  <div className="text-xl sm:text-2xl font-bold text-primary">
                     ₹{booking.pricing.finalTotal}
                   </div>
                 </div>
@@ -354,6 +360,7 @@ export const DashboardPage: React.FC = () => {
                   <Button
                     variant="destructive"
                     onClick={() => handleCancelBooking(booking._id)}
+                    className="w-full sm:w-auto text-sm sm:text-base h-9 sm:h-10"
                   >
                     Cancel Booking
                   </Button>
@@ -366,9 +373,9 @@ export const DashboardPage: React.FC = () => {
           {bookings.length === 0 && (
             <Card>
               <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">No bookings found</p>
-                <Button onClick={() => window.location.href = '/courts'}>
+                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm sm:text-base text-muted-foreground mb-4">No bookings found</p>
+                <Button onClick={() => window.location.href = '/courts'} className="text-sm sm:text-base h-9 sm:h-10">
                   Book Your First Court
                 </Button>
               </CardContent>
@@ -383,61 +390,61 @@ export const DashboardPage: React.FC = () => {
           {waitlist.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((entry) => (
             <Card key={entry._id}>
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center">
-                      <MapPin className="h-5 w-5 mr-2 text-primary" />
-                      {entry.court.name}
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary flex-shrink-0" />
+                      <span className="truncate">{entry.court.name}</span>
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">
                       Waitlist Entry ID: {entry._id.slice(-8)}
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(entry.status)}`}>
+                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(entry.status)}`}>
                       {entry.status}
                     </span>
                     {entry.status === 'expired' && (
-                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
                     )}
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                   <div>
-                    <div className="flex items-center text-sm text-muted-foreground mb-1">
-                      <Calendar className="h-4 w-4 mr-1" />
+                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-1">
+                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Desired Date
                     </div>
-                    <div className="font-semibold">
+                    <div className="font-semibold text-sm sm:text-base">
                       {format(new Date(entry.desiredDate), 'MMM dd, yyyy')}
                     </div>
                   </div>
                   <div>
-                    <div className="flex items-center text-sm text-muted-foreground mb-1">
-                      <Clock className="h-4 w-4 mr-1" />
+                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-1">
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Desired Time
                     </div>
-                    <div className="font-semibold">
+                    <div className="font-semibold text-sm sm:text-base">
                       {entry.desiredStartTime} - {entry.desiredEndTime}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground mb-1">Position</div>
-                    <div className="font-semibold">#{entry.position}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground mb-1">Position</div>
+                    <div className="font-semibold text-sm sm:text-base">#{entry.position}</div>
                   </div>
                 </div>
 
                 {entry.equipment && entry.equipment.length > 0 && (
                   <div className="mb-4">
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
-                      <Package className="h-4 w-4 mr-1" />
+                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2">
+                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Equipment
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {entry.equipment.map((eq, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-gray-100 text-sm rounded">
+                        <span key={idx} className="px-2 py-1 bg-gray-100 text-xs sm:text-sm rounded">
                           {eq.item.name} × {eq.quantity}
                         </span>
                       ))}
@@ -447,20 +454,20 @@ export const DashboardPage: React.FC = () => {
 
                 {entry.coach && (
                   <div className="mb-4">
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
-                      <User className="h-4 w-4 mr-1" />
+                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-2">
+                      <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Coach
                     </div>
-                    <div className="font-semibold">{entry.coach.name}</div>
+                    <div className="font-semibold text-sm sm:text-base">{entry.coach.name}</div>
                   </div>
                 )}
 
                 {entry.status === 'expired' && (
-                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                    <div className="flex items-start">
-                      <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-red-800 font-medium">This waitlist entry has expired</p>
+                  <div className="mt-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm text-red-800 font-medium">This waitlist entry has expired</p>
                         <p className="text-xs text-red-600 mt-1">
                           The time slot has passed and we couldn't secure a booking for you. 
                           You can try booking another slot.
@@ -470,10 +477,10 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex justify-between items-center pt-4 border-t">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 pt-4 border-t">
                   <div>
-                    <div className="text-sm text-muted-foreground">Created</div>
-                    <div className="text-sm font-medium">
+                    <div className="text-xs sm:text-sm text-muted-foreground">Created</div>
+                    <div className="text-xs sm:text-sm font-medium">
                       {format(new Date(entry.createdAt), 'MMM dd, yyyy HH:mm')}
                     </div>
                   </div>
@@ -481,6 +488,7 @@ export const DashboardPage: React.FC = () => {
                     <Button
                       variant="default"
                       onClick={() => window.location.href = '/courts'}
+                      className="w-full sm:w-auto text-sm sm:text-base h-9 sm:h-10"
                     >
                       Book Again
                     </Button>
@@ -493,9 +501,9 @@ export const DashboardPage: React.FC = () => {
           {waitlist.length === 0 && (
             <Card>
               <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">No waitlist entries found</p>
-                <Button onClick={() => window.location.href = '/courts'}>
+                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm sm:text-base text-muted-foreground mb-4">No waitlist entries found</p>
+                <Button onClick={() => window.location.href = '/courts'} className="text-sm sm:text-base h-9 sm:h-10">
                   Browse Courts
                 </Button>
               </CardContent>
@@ -507,21 +515,23 @@ export const DashboardPage: React.FC = () => {
       {/* Pagination */}
       {((viewType === 'bookings' && bookings.length > itemsPerPage) || 
         (viewType === 'waitlist' && waitlist.length > itemsPerPage)) && (
-        <div className="flex justify-center items-center gap-2 mt-6">
+        <div className="flex justify-center items-center gap-2 mt-4 sm:mt-6">
           <Button
             variant="outline"
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
+            className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-4"
           >
             Previous
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xs sm:text-sm text-muted-foreground">
             Page {currentPage} of {Math.ceil((viewType === 'bookings' ? bookings.length : waitlist.length) / itemsPerPage)}
           </span>
           <Button
             variant="outline"
             onClick={() => setCurrentPage(p => Math.min(Math.ceil((viewType === 'bookings' ? bookings.length : waitlist.length) / itemsPerPage), p + 1))}
             disabled={currentPage === Math.ceil((viewType === 'bookings' ? bookings.length : waitlist.length) / itemsPerPage)}
+            className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-4"
           >
             Next
           </Button>
