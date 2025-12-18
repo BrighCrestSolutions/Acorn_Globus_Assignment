@@ -47,6 +47,8 @@ export const authAPI = {
     api.post('/auth/send-otp', { email, name }),
   verifyOTP: (email: string, name: string, otp: string) =>
     api.post('/auth/verify-otp', { email, name, otp }),
+  adminPasswordLogin: (name: string, password: string) =>
+    api.post('/auth/admin-password-login', { name, password }),
   getCurrentUser: () => api.get('/auth/me'),
 };
 

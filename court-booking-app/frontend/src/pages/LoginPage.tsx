@@ -13,10 +13,12 @@ import { authAPI } from '../services/api';
 
 export const LoginPage: React.FC = () => {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('otp');
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -86,6 +88,23 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await authAPI.adminPasswordLogin(name, password);
+      const { token, user } = response.data;
+      login(token, user);
+      navigate('/');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6 md:p-8">
       <WarpBackground className="w-full max-w-md bg-white/95 backdrop-blur-sm">
@@ -99,7 +118,7 @@ export const LoginPage: React.FC = () => {
           <CardTitle className="text-xl sm:text-2xl font-bold">Welcome to Court Booking</CardTitle>
           <CardDescription className="text-sm sm:text-base">
             {showAdminLogin 
-              ? 'Admin login with OTP verification' 
+              ? (loginMethod === 'otp' ? 'Admin login with OTP verification' : 'Admin login with password') 
               : 'Sign in with your Google account to get started'}
           </CardDescription>
         </CardHeader>
@@ -165,7 +184,78 @@ export const LoginPage: React.FC = () => {
                 By continuing, you agree to our Terms of Service and Privacy Policy
               </p>
             </div>
-          ) : step === 'email' ? (
+          ) : loginMethod === 'password' ? (
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Enter admin name"
+                    className="pl-9"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter admin password"
+                    className="pl-9"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              {error && (
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                  {error}
+                </div>
+              )}
+              <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base" disabled={loading}>
+                {loading ? 'Logging in...' : 'Login'}
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 text-xs sm:text-sm"
+                  onClick={() => {
+                    setLoginMethod('otp');
+                    setStep('email');
+                    setError('');
+                    setPassword('');
+                  }}
+                >
+                  Use OTP Instead
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 text-xs sm:text-sm"
+                  onClick={() => {
+                    setShowAdminLogin(false);
+                    setLoginMethod('otp');
+                    setStep('email');
+                    setError('');
+                    setName('');
+                    setPassword('');
+                  }}
+                >
+                  Back
+                </Button>
+              </div>
+            </form>
+          ) : loginMethod === 'otp' && step === 'email' ? (
             <form onSubmit={handleSendOTP} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
@@ -205,19 +295,33 @@ export const LoginPage: React.FC = () => {
               <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base" disabled={loading}>
                 {loading ? 'Sending...' : 'Send OTP'}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full text-sm sm:text-base"
-                onClick={() => {
-                  setShowAdminLogin(false);
-                  setError('');
-                  setName('');
-                  setEmail('');
-                }}
-              >
-                Back to Google Sign-In
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 text-xs sm:text-sm"
+                  onClick={() => {
+                    setLoginMethod('password');
+                    setError('');
+                    setEmail('');
+                  }}
+                >
+                  Use Password
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 text-xs sm:text-sm"
+                  onClick={() => {
+                    setShowAdminLogin(false);
+                    setError('');
+                    setName('');
+                    setEmail('');
+                  }}
+                >
+                  Back
+                </Button>
+              </div>
             </form>
           ) : (
             <form onSubmit={handleVerifyOTP} className="space-y-4">
@@ -248,18 +352,33 @@ export const LoginPage: React.FC = () => {
               <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base" disabled={loading || otp.length !== 6}>
                 {loading ? 'Verifying...' : 'Verify & Login'}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full text-sm sm:text-base"
-                onClick={() => {
-                  setStep('email');
-                  setOtp('');
-                  setError('');
-                }}
-              >
-                Back to Email
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 text-xs sm:text-sm"
+                  onClick={() => {
+                    setStep('email');
+                    setOtp('');
+                    setError('');
+                  }}
+                >
+                  Change Email
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 text-xs sm:text-sm"
+                  onClick={() => {
+                    setLoginMethod('password');
+                    setStep('email');
+                    setOtp('');
+                    setError('');
+                  }}
+                >
+                  Use Password
+                </Button>
+              </div>
             </form>
           )}
         </CardContent>

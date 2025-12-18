@@ -6,6 +6,7 @@ const {
   firebaseSync,
   sendOTP,
   verifyOTP,
+  adminPasswordLogin,
   getCurrentUser
 } = require('../controllers/authController');
 
@@ -45,6 +46,16 @@ const verifyOTPValidation = [
 ];
 
 router.post('/verify-otp', ...verifyOTPValidation, validate, verifyOTP);
+
+// @route   POST /api/auth/admin-password-login
+// @desc    Admin login with password (for testing/judges)
+// @access  Public
+const adminPasswordLoginValidation = [
+  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('password').trim().notEmpty().withMessage('Password is required')
+];
+
+router.post('/admin-password-login', ...adminPasswordLoginValidation, validate, adminPasswordLogin);
 
 // @route   GET /api/auth/me
 // @desc    Get current user

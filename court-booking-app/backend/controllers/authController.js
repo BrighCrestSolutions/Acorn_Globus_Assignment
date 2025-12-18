@@ -214,6 +214,76 @@ exports.verifyOTP = async (req, res) => {
 };
 
 /**
+ * @desc    Admin login with password (for testing/judges)
+ * @route   POST /api/auth/admin-password-login
+ * @access  Public
+ */
+exports.adminPasswordLogin = async (req, res) => {
+  try {
+    const { name, password } = req.body;
+
+    // Check if admin password is configured
+    if (!process.env.ADMIN_PASSWORD || !process.env.SUPER_ADMIN_EMAIL) {
+      return res.status(503).json({
+        success: false,
+        message: 'Admin password login not configured'
+      });
+    }
+
+    // Find super admin user
+    const user = await User.findOne({ 
+      email: process.env.SUPER_ADMIN_EMAIL,
+      role: 'admin'
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin user not found'
+      });
+    }
+
+    // Verify name matches
+    if (user.name !== name) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Verify password
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Generate JWT token
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Admin password login error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+/**
  * @desc    Get current user
  * @route   GET /api/auth/me
  * @access  Private
