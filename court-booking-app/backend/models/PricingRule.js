@@ -12,7 +12,7 @@ const pricingRuleSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['time-based', 'day-based', 'court-type', 'seasonal', 'custom'],
+    enum: ['time-based', 'day-based', 'court-type', 'seasonal', 'festival', 'specific-date', 'custom'],
     required: true
   },
   conditions: {
@@ -29,6 +29,13 @@ const pricingRuleSchema = new mongoose.Schema({
     // For date range rules
     startDate: Date,
     endDate: Date,
+    
+    // For festival rules (e.g., Diwali, Christmas, New Year)
+    festivalName: String,
+    festivalDate: Date,
+    
+    // For specific date rules (one-time offers)
+    specificDate: Date,
     
     // Custom conditions (flexible JSON)
     custom: mongoose.Schema.Types.Mixed
@@ -58,9 +65,9 @@ const pricingRuleSchema = new mongoose.Schema({
   }
 });
 
-pricingRuleSchema.pre('save', function(next) {
+pricingRuleSchema.pre('save', function() {
   this.updatedAt = Date.now();
-  next();
+  
 });
 
 // Index for efficient rule queries

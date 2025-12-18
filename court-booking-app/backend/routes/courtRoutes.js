@@ -48,7 +48,7 @@ router.get('/:id/availability', getCourtAvailability);
 // @route   POST /api/courts
 // @desc    Create a new court (Admin only)
 // @access  Private/Admin
-router.post('/', protect, admin, courtValidation, validate, createCourt);
+router.post('/', protect, admin, ...courtValidation, validate, createCourt);
 
 // @route   PUT /api/courts/:id
 // @desc    Update court (Admin only)

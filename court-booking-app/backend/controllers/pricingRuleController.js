@@ -10,7 +10,8 @@ exports.getPricingRules = async (req, res) => {
     const { active } = req.query;
     
     const query = {};
-    if (active === 'true') query.isActive = true;
+    if (active === 'true') query.active = true;
+    if (active === 'false') query.active = false;
 
     const rules = await PricingRule.find(query).sort({ priority: -1, createdAt: -1 });
 
@@ -159,12 +160,12 @@ exports.togglePricingRule = async (req, res) => {
       });
     }
 
-    rule.isActive = !rule.isActive;
+    rule.active = !rule.active;
     await rule.save();
 
     res.status(200).json({
       success: true,
-      message: `Pricing rule ${rule.isActive ? 'activated' : 'deactivated'} successfully`,
+      message: `Pricing rule ${rule.active ? 'activated' : 'deactivated'} successfully`,
       rule
     });
   } catch (error) {

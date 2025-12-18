@@ -152,12 +152,39 @@ const seedData = async () => {
         status: 'available'
       },
       {
-        name: 'Shuttlecock Set (12 pieces)',
-        type: 'other',
+        name: 'Premium Shuttlecock Set (12 pieces)',
+        type: 'ball',
         totalQuantity: 20,
         availableQuantity: 20,
         hourlyRate: 20,
-        description: 'Premium feather shuttlecocks',
+        description: 'Premium feather shuttlecocks for competitive play',
+        status: 'available'
+      },
+      {
+        name: 'Practice Shuttlecock Set (12 pieces)',
+        type: 'ball',
+        totalQuantity: 30,
+        availableQuantity: 30,
+        hourlyRate: 15,
+        description: 'Plastic shuttlecocks for practice sessions',
+        status: 'available'
+      },
+      {
+        name: 'Professional Badminton Net',
+        type: 'net',
+        totalQuantity: 4,
+        availableQuantity: 4,
+        hourlyRate: 0,
+        description: 'Tournament-grade badminton net (Included with court)',
+        status: 'available'
+      },
+      {
+        name: 'Badminton Grip Tape',
+        type: 'other',
+        totalQuantity: 50,
+        availableQuantity: 50,
+        hourlyRate: 5,
+        description: 'Anti-slip grip tape for rackets',
         status: 'available'
       }
     ]);
@@ -264,13 +291,71 @@ const seedData = async () => {
         active: true
       },
       {
+        name: 'Christmas Special Offer',
+        description: '40% discount on Christmas Day - Celebrate with sports!',
+        type: 'festival',
+        conditions: {
+          festivalName: 'Christmas',
+          festivalDate: new Date('2025-12-25')
+        },
+        multiplier: 0.6,
+        priority: 150,
+        active: true
+      },
+      {
+        name: 'New Year Sale',
+        description: '50% off on New Year\'s Day',
+        type: 'festival',
+        conditions: {
+          festivalName: 'New Year',
+          festivalDate: new Date('2026-01-01')
+        },
+        multiplier: 0.5,
+        priority: 150,
+        active: true
+      },
+      {
+        name: 'Diwali Special',
+        description: '30% discount during Diwali festival',
+        type: 'festival',
+        conditions: {
+          festivalName: 'Diwali',
+          festivalDate: new Date('2025-10-23')
+        },
+        multiplier: 0.7,
+        priority: 140,
+        active: false
+      },
+      {
+        name: 'Grand Opening Day',
+        description: 'Special 60% discount for grand opening',
+        type: 'specific-date',
+        conditions: {
+          specificDate: new Date('2025-12-20')
+        },
+        multiplier: 0.4,
+        priority: 200,
+        active: true
+      },
+      {
+        name: 'Summer Season (June-August)',
+        description: '15% discount during summer months',
+        type: 'seasonal',
+        conditions: {
+          startDate: new Date('2026-06-01'),
+          endDate: new Date('2026-08-31')
+        },
+        multiplier: 0.85,
+        priority: 50,
+        active: true
+      },
+      {
         name: 'Weekday Afternoon Discount',
         description: '10% discount for weekday afternoons (12-4 PM)',
         type: 'time-based',
         conditions: {
           startHour: 12,
-          endHour: 16,
-          daysOfWeek: [1, 2, 3, 4, 5] // Monday to Friday
+          endHour: 16
         },
         multiplier: 0.9,
         priority: 60,

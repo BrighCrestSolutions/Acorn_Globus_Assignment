@@ -42,7 +42,7 @@ router.get('/:id', getCoachById);
 // @route   POST /api/coaches
 // @desc    Create new coach (Admin only)
 // @access  Private/Admin
-router.post('/', protect, admin, coachValidation, validate, createCoach);
+router.post('/', protect, admin, ...coachValidation, validate, createCoach);
 
 // @route   PUT /api/coaches/:id
 // @desc    Update coach (Admin only)

@@ -14,7 +14,7 @@ const {
 // Validation middleware
 const pricingRuleValidation = [
   body('name').trim().notEmpty().withMessage('Rule name is required'),
-  body('type').isIn(['time-based', 'day-based', 'court-type', 'seasonal', 'custom']).withMessage('Invalid rule type'),
+  body('type').isIn(['time-based', 'day-based', 'court-type', 'seasonal', 'festival', 'specific-date', 'custom']).withMessage('Invalid rule type'),
   body('multiplier').isFloat({ min: 0 }).withMessage('Multiplier must be a positive number')
 ];
 
@@ -43,7 +43,7 @@ router.get('/:id', getPricingRuleById);
 // @route   POST /api/pricing-rules
 // @desc    Create new pricing rule (Admin only)
 // @access  Private/Admin
-router.post('/', protect, admin, pricingRuleValidation, validate, createPricingRule);
+router.post('/', protect, admin, ...pricingRuleValidation, validate, createPricingRule);
 
 // @route   PUT /api/pricing-rules/:id
 // @desc    Update pricing rule (Admin only)

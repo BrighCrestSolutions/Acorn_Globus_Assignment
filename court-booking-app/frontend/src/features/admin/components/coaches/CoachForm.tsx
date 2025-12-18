@@ -14,18 +14,22 @@ interface CoachFormProps {
 export const CoachForm: React.FC<CoachFormProps> = ({ initialData, onSubmit, onCancel, isEditing }) => {
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
+    phone: '',
     specialization: '',
     hourlyRate: 500,
-    status: 'available'
+    status: 'active'
   });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         name: initialData.name || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
         specialization: initialData.specialization || '',
         hourlyRate: initialData.hourlyRate || 500,
-        status: initialData.status || 'available'
+        status: initialData.status || 'active'
       });
     }
   }, [initialData]);
@@ -50,6 +54,27 @@ export const CoachForm: React.FC<CoachFormProps> = ({ initialData, onSubmit, onC
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="coach@example.com"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+91-9876543210"
               />
             </div>
             <div>
@@ -80,8 +105,8 @@ export const CoachForm: React.FC<CoachFormProps> = ({ initialData, onSubmit, onC
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               >
-                <option value="available">Available</option>
-                <option value="unavailable">Unavailable</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
           </div>

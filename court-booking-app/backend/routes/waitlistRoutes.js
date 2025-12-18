@@ -33,7 +33,7 @@ const validate = (req, res, next) => {
 // @route   POST /api/waitlist
 // @desc    Join waitlist for a time slot
 // @access  Private
-router.post('/', protect, waitlistValidation, validate, joinWaitlist);
+router.post('/', protect, ...waitlistValidation, validate, joinWaitlist);
 
 // @route   GET /api/waitlist
 // @desc    Get user's waitlist entries

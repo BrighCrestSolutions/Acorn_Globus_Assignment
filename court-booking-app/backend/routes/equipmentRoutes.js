@@ -48,7 +48,7 @@ router.get('/:id', getEquipmentById);
 // @route   POST /api/equipment
 // @desc    Create new equipment (Admin only)
 // @access  Private/Admin
-router.post('/', protect, admin, equipmentValidation, validate, createEquipment);
+router.post('/', protect, admin, ...equipmentValidation, validate, createEquipment);
 
 // @route   PUT /api/equipment/:id
 // @desc    Update equipment (Admin only)

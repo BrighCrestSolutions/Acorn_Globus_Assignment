@@ -33,7 +33,7 @@ const validate = (req, res, next) => {
   next();
 };
 
-router.post('/send-otp', sendOTPValidation, validate, sendOTP);
+router.post('/send-otp', ...sendOTPValidation, validate, sendOTP);
 
 // @route   POST /api/auth/verify-otp
 // @desc    Verify OTP and login (admin only)
@@ -44,7 +44,7 @@ const verifyOTPValidation = [
   body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
 ];
 
-router.post('/verify-otp', verifyOTPValidation, validate, verifyOTP);
+router.post('/verify-otp', ...verifyOTPValidation, validate, verifyOTP);
 
 // @route   GET /api/auth/me
 // @desc    Get current user

@@ -48,9 +48,9 @@ const courtSchema = new mongoose.Schema({
 });
 
 // Update timestamp on save
-courtSchema.pre('save', function(next) {
+courtSchema.pre('save', function() {
   this.updatedAt = Date.now();
-  next();
+
 });
 
 module.exports = mongoose.model('Court', courtSchema);

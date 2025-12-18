@@ -52,9 +52,9 @@ const coachSchema = new mongoose.Schema({
   }
 });
 
-coachSchema.pre('save', function(next) {
+coachSchema.pre('save', function() {
   this.updatedAt = Date.now();
-  next();
+  ;
 });
 
 module.exports = mongoose.model('Coach', coachSchema);
